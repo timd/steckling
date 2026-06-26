@@ -1,0 +1,19 @@
+# Bun / Node
+node_modules/
+.bun/
+*.log
+
+# Build output
+dist/
+steck
+steck-*
+*.tgz
+
+# Steckling runtime (per-worktree env the engine writes)
+.steckling/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

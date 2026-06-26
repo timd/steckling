@@ -1,0 +1,24 @@
+# Demo config — the smallest end-to-end Steckling setup.
+# Run `steck up` from this directory (or any worktree of this repo).
+version: 1
+
+worktrees:
+  dir: "../{repo}-trees"
+  base: main
+
+services:
+  compose: ./compose.steckling.yml
+  expose:
+    postgres:
+      container: 5432
+      env: DATABASE_URL
+      url: "postgres://steckling:steckling@localhost:{port}/steckling"
+
+app:
+  run: "bun run app/server.ts"
+  port:
+    env: PORT
+    base: 4000
+
+hooks:
+  provision: "bun run app/provision.ts"
