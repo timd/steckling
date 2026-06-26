@@ -140,4 +140,4 @@ Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The engine is
 
 ## License
 
-[MIT](LICENSE) © timd
+[MIT](LICENSE) © Tim Duckett
