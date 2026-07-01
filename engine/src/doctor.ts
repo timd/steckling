@@ -52,6 +52,20 @@ async function checkDocker(): Promise<Check[]> {
   return [daemon, compose];
 }
 
+async function checkRailway(): Promise<Check> {
+  if (!which("railway")) {
+    return {
+      name: "railway",
+      status: "warn",
+      detail: "not found — only needed for `steck deploy` (docs.railway.com/cli)",
+    };
+  }
+  const r = await run(["railway", "whoami"]);
+  return r.ok
+    ? { name: "railway", status: "ok", detail: r.stdout.split("\n")[0] ?? "authenticated" }
+    : { name: "railway", status: "warn", detail: "installed but not logged in — `railway login` or set RAILWAY_TOKEN" };
+}
+
 async function checkConfig(): Promise<Check> {
   const res = await loadConfig();
   if (res.ok) {
@@ -77,6 +91,7 @@ export async function runDoctor(): Promise<number> {
   checks.push({ name: "bun", status: "ok", detail: `v${Bun.version}` });
   checks.push(await checkGit());
   checks.push(...(await checkDocker()));
+  checks.push(await checkRailway());
   checks.push(await checkConfig());
 
   const icon = (s: Status): string =>

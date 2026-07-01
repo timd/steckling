@@ -22,3 +22,18 @@ app:
 
 hooks:
   provision: "bun run app/provision.ts"
+
+# Deploy this branch's agent to Railway (Path 1). `steck deploy --dry-run` shows
+# exactly what would run; `steck deploy` ships it once you've linked a project.
+# The agent (agent.ts) is a separate workload from the local app above.
+agent:
+  kind: service # always-on | scheduled
+  start: "bun run agent.ts"
+  build:
+    dockerfile: ./Dockerfile
+
+deploy:
+  target: railway
+  env:
+    ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+    HEARTBEAT_MS: "60000"

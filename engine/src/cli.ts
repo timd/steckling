@@ -7,6 +7,7 @@
  */
 
 import { loadConfig, formatConfigError } from "./config";
+import { deploy, deployDestroy, deployLogs, deployStatus } from "./deploy";
 import { runDoctor } from "./doctor";
 import { down, execCmd, list, newWorktree, prune, rm, status, up } from "./lifecycle";
 import { startMcp } from "./mcp/server";
@@ -26,6 +27,9 @@ ${c.bold("Commands:")}
   exec -- <cmd>         Run a command with this branch's env loaded
   rm [branch] [--yes]   Destroy containers + volumes (asks first)
   prune [--yes]         Clean up merged/dead branches (on confirm)
+  deploy [--dry-run]    Ship this branch's agent to Railway (--status to inspect)
+  logs [-n N] [--build] Tail the deployed agent's logs
+  destroy [--yes]       Tear down this branch's Railway deployment
   config                Validate + print the resolved steckling.yml
   doctor                Check the environment is ready
   mcp                   Start the MCP server (stdio) for agents
@@ -106,6 +110,25 @@ async function main(): Promise<number> {
     case "prune": {
       const flags = argv.slice(1).filter((a) => a.startsWith("-"));
       return prune({ yes: flags.includes("--yes") || flags.includes("-y") });
+    }
+    case "deploy": {
+      const flags = argv.slice(1);
+      if (flags.includes("--status")) return deployStatus();
+      return deploy({ dryRun: flags.includes("--dry-run") });
+    }
+    case "logs": {
+      const flags = argv.slice(1);
+      let lines: number | undefined;
+      const nIdx = flags.indexOf("-n");
+      if (nIdx !== -1 && flags[nIdx + 1]) {
+        const n = Number(flags[nIdx + 1]);
+        if (Number.isFinite(n)) lines = n;
+      }
+      return deployLogs({ lines, build: flags.includes("--build") });
+    }
+    case "destroy": {
+      const flags = argv.slice(1);
+      return deployDestroy({ yes: flags.includes("--yes") || flags.includes("-y") });
     }
     case "mcp":
       return startMcp();

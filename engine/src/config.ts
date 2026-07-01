@@ -66,8 +66,58 @@ export const StecklingConfigSchema = z
       })
       .strict()
       .default({}),
+    // Remote agent deployment (Path 1). Optional and additive: a config without
+    // these blocks behaves exactly as before.
+    agent: z
+      .object({
+        kind: z.enum(["service", "scheduled"]).default("service"),
+        start: z.string().min(1),
+        build: z
+          .object({ dockerfile: z.string().min(1).default("./Dockerfile") })
+          .strict()
+          .default({}),
+        // Command run before the container starts (e.g. a migration). Kept
+        // separate from hooks.provision, whose deps are the *local* stack.
+        preDeploy: z.string().min(1).optional(),
+        // cron for kind: scheduled (UTC, 5-field; Railway's floor is every 5m).
+        schedule: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional(),
+    deploy: z
+      .object({
+        target: z.literal("railway"),
+        project: z.string().min(1).optional(),
+        needs: z.array(z.string()).default([]),
+        env: z.record(z.string(), z.coerce.string()).default({}),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((cfg, ctx) => {
+    if (cfg.deploy && !cfg.agent) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["agent"],
+        message: "`deploy` requires an `agent` block (nothing to deploy without one).",
+      });
+    }
+    if (cfg.agent?.kind === "scheduled" && !cfg.agent.schedule) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["agent", "schedule"],
+        message: "`agent.kind: scheduled` requires `agent.schedule` (a 5-field cron expression).",
+      });
+    }
+    if (cfg.agent?.schedule && !/^\S+(\s+\S+){4}$/.test(cfg.agent.schedule.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["agent", "schedule"],
+        message: "`agent.schedule` must be a 5-field cron expression (minute hour day month weekday).",
+      });
+    }
+  });
 
 export type StecklingConfig = z.infer<typeof StecklingConfigSchema>;
 
