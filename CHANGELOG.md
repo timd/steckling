@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- **Remote agent deploy (Railway)** — ship a branch's agent to Railway as a long-running or
+  scheduled service. New optional `agent`/`deploy` blocks in `steckling.yml`, new commands
+  `deploy` (`--dry-run`, `--status`), `logs`, and `destroy`, a generated `railway.json`
+  (config-as-code), a `railway` check in `doctor`, and a runnable demo agent. See
+  [docs/deploy-railway.md](docs/deploy-railway.md) and
+  [ADR 0001](docs/adr/0001-remote-agent-target.md). Path 1 of
+  [the remote-agents plan](docs/plan-remote-agents.md); ephemeral sandboxes are next.
+
 ## [0.1.0] - 2026-06-05
 
 Initial release.

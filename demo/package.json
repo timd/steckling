@@ -1,0 +1,8 @@
+{
+  "name": "steckling-demo-agent",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest"
+  }
+}

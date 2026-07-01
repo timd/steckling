@@ -13,6 +13,16 @@ export interface PortsRecord {
   app?: number;
 }
 
+/** A branch's remote (Railway) deployment, present once `steck deploy` has run. */
+export interface RailwayRecord {
+  project: string;
+  environment?: string;
+  service?: string;
+  domain?: string;
+  schedule?: string;
+  lastDeployAt: string;
+}
+
 export interface WorktreeRecord {
   project: string;
   branch: string;
@@ -21,6 +31,8 @@ export interface WorktreeRecord {
   ports: PortsRecord;
   createdAt: string;
   lastUsedAt: string;
+  /** Set once this branch has been deployed to a remote target. */
+  railway?: RailwayRecord;
 }
 
 export interface Registry {

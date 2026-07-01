@@ -1,0 +1,5 @@
+node_modules
+.steckling
+app/
+*.md
+compose.steckling.yml

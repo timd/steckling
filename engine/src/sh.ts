@@ -19,6 +19,8 @@ export interface RunOptions {
   cwd?: string;
   /** Extra env merged on top of the current process env. */
   env?: Record<string, string>;
+  /** Written to the child's stdin — e.g. to pass a secret without exposing it in argv/`ps`. */
+  input?: string;
 }
 
 /** Run a command to completion, capturing trimmed stdout/stderr. Never throws on non-zero exit. */
@@ -26,6 +28,7 @@ export async function run(cmd: string[], opts: RunOptions = {}): Promise<RunResu
   const proc = Bun.spawn(cmd, {
     cwd: opts.cwd,
     env: opts.env ? { ...process.env, ...opts.env } : undefined,
+    stdin: opts.input !== undefined ? new TextEncoder().encode(opts.input) : undefined,
     stdout: "pipe",
     stderr: "pipe",
   });

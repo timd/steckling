@@ -17,3 +17,6 @@ steck-*
 .idea/
 .vscode/
 *.swp
+
+# crit review sidecars
+.*.comments.json

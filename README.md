@@ -129,6 +129,7 @@ isolated, you can point a separate Claude session at each one and let them work 
 - [Concepts](docs/concepts.md) — the mental model
 - [Install](docs/install.md) · [Quickstart](docs/quickstart.md) · [Adopting an existing project](docs/adopting-an-existing-project.md)
 - [Commands](docs/commands.md) · [`steckling.yml` reference](docs/config-reference.md)
+- [Deploy an agent to Railway](docs/deploy-railway.md) — take a branch's agent off your machine
 - [MCP](docs/mcp.md) · [Troubleshooting](docs/troubleshooting.md)
 - Recipes: [Node/Nest](docs/recipes/nestjs.md) · [Rails](docs/recipes/rails.md) · [Django](docs/recipes/django.md) · [Go](docs/recipes/go.md)
 - [Design notes & decisions](docs/plan.md)
