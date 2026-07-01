@@ -39,6 +39,22 @@ app:
 hooks:
   provision: "npm run migrate && npm run seed" # run once on first boot (and on --reprovision)
   teardown: "" # optional; reserved for pre-rm cleanup
+
+# Remote agent deploy (optional — Path 1; see deploy-railway.md)
+agent:
+  kind: service # service (always-on) | scheduled (cron)
+  start: "bun run agent.ts" # start command for the deployed container
+  build:
+    dockerfile: ./Dockerfile
+  preDeploy: "" # optional command run before the container starts
+  schedule: "0 9 * * *" # required for kind: scheduled (5-field cron, UTC, ≥5m)
+
+deploy:
+  target: railway
+  project: my-agent # optional; else link a project once via the railway CLI
+  needs: [postgres] # managed databases to provision on Railway
+  env: # variables pushed to Railway (${VARS} expand from your shell)
+    ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
 ```
 
 ## Field detail
@@ -59,9 +75,22 @@ hooks:
 | `app.port.env` / `app.port.base` | no | — | Allocate + inject a host port for the app. |
 | `hooks.provision` | no | `""` | Runs once after services are healthy (tracked by `.steckling/.provisioned`). |
 | `hooks.teardown` | no | `""` | Reserved. |
+| `agent` | no | — | Optional; enables `steck deploy`. See [Deploy to Railway](deploy-railway.md). |
+| `agent.kind` | no | `service` | `service` (always-on) or `scheduled` (cron; needs `schedule`). |
+| `agent.start` | yes† | — | Container start command (†required when `agent` is set). |
+| `agent.build.dockerfile` | no | `./Dockerfile` | Dockerfile that builds the agent image. |
+| `agent.preDeploy` | no | — | Command run before the container starts (Railway `preDeployCommand`). |
+| `agent.schedule` | no | — | 5-field cron (UTC, ≥5 min); required when `kind: scheduled`. |
+| `deploy.target` | yes† | — | `railway` (†required when `deploy` is set). |
+| `deploy.project` | no | — | Railway project name; else link once via the `railway` CLI. |
+| `deploy.needs` | no | `[]` | Managed databases to provision (`postgres`, `redis`, …). |
+| `deploy.env` | no | `{}` | Variables pushed to Railway; `${VAR}` expands from your shell. |
 
 Unknown keys are rejected (strict validation) — run `steck config` to validate and print
 the resolved config.
+
+The `agent` and `deploy` blocks are optional and power `steck deploy` — see
+[Deploy to Railway](deploy-railway.md).
 
 ## How values reach your app
 

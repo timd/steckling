@@ -13,6 +13,7 @@ Reference:
 
 - **[Commands](commands.md)** — every command and flag.
 - **[`steckling.yml` reference](config-reference.md)** — every config field + placeholders.
+- **[Deploy to Railway](deploy-railway.md)** — take a branch's agent off your machine (Path 1).
 - **[MCP](mcp.md)** — driving the worktree fleet from Claude / other agents.
 - **[Troubleshooting](troubleshooting.md)** — common problems and fixes.
 
@@ -24,4 +25,5 @@ Recipes:
 Project:
 
 - **[Design notes & decisions](plan.md)** — why Steckling is built the way it is.
+- **[Architecture decisions](adr/)** — ADRs (0001: the remote agent-deploy target).
 - **[Contributing](../CONTRIBUTING.md)** · **[Releasing](../RELEASING.md)**

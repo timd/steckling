@@ -112,6 +112,8 @@ Full walkthrough → [Quickstart](docs/quickstart.md) · already have a project?
 | `steck list` / `status` | What's registered, running, and on which ports |
 | `steck exec -- <cmd>` | Run a command wired to this branch's env (e.g. `psql $DATABASE_URL`) |
 | `steck rm` / `prune` | Reclaim a branch's stack / bulk-reclaim merged branches |
+| `steck deploy [--dry-run]` | Ship this branch's agent to Railway → [guide](docs/deploy-railway.md) |
+| `steck logs` / `destroy` | Tail or tear down the deployed agent |
 | `steck mcp` | Run the MCP server so Claude can drive the fleet |
 | `steck doctor` / `config` | Check the environment / validate `steckling.yml` |
 

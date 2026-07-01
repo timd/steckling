@@ -107,6 +107,38 @@ and reclaim their stacks (containers + volumes + registry entry). Lists candidat
 
 ---
 
+### `steck deploy [--dry-run] [--status]`
+
+Ship the current branch's **agent** to Railway as a long-running or scheduled service. Requires
+`agent`/`deploy` blocks in `steckling.yml` and the `railway` CLI, authenticated — see
+[Deploy to Railway](deploy-railway.md).
+
+1. Generate `railway.json` from the `agent` block (build + start command + optional cron).
+2. Provision `deploy.needs` databases; push `deploy.env` variables (secrets via `--stdin`).
+3. `railway up` to build the Dockerfile and deploy.
+
+Flags:
+
+- `--dry-run` — print the generated `railway.json` and the command plan; execute nothing.
+- `--status` — show the recorded deployment (project, kind, last deploy) instead of deploying.
+
+---
+
+### `steck logs [-n N] [--build]`
+
+Tail the deployed agent's logs (`railway logs`). `-n N` limits to the last N lines; `--build`
+shows build logs instead of runtime logs.
+
+---
+
+### `steck destroy [--yes]`
+
+Tear down the current branch's Railway deployment (`railway down`). The **local** stack and git
+worktree are left untouched. `--yes`/`-y` skips the confirmation prompt (required when
+non-interactive).
+
+---
+
 ### `steck mcp`
 
 Start the stdio [MCP](mcp.md) server — exposes the fleet to agents as tools + the
@@ -123,5 +155,6 @@ debugging the config or seeing what Steckling will use.
 
 ### `steck doctor`
 
-Pre-flight check: bun, git, the Docker daemon, `docker compose`, and whether a valid `steckling.yml`
-is present. Exits non-zero if a hard requirement fails.
+Pre-flight check: bun, git, the Docker daemon, `docker compose`, the `railway` CLI (a warning if
+absent — it's only needed for `steck deploy`), and whether a valid `steckling.yml` is present.
+Exits non-zero if a hard requirement fails.
