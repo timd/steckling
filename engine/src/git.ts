@@ -3,12 +3,16 @@
 import { dirname } from "node:path";
 import { run, type RunResult } from "./sh";
 
-/** The current branch name, or null on detached HEAD / not a repo. */
+/**
+ * The current branch name, or null on detached HEAD / not a repo.
+ * `symbolic-ref` (not `rev-parse --abbrev-ref`) so an unborn branch — a fresh
+ * `git init` before the first commit — still reports its name.
+ */
 export async function currentBranch(cwd: string): Promise<string | null> {
-  const r = await run(["git", "rev-parse", "--abbrev-ref", "HEAD"], { cwd });
+  const r = await run(["git", "symbolic-ref", "--short", "-q", "HEAD"], { cwd });
   if (!r.ok) return null;
   const b = r.stdout.trim();
-  return b === "" || b === "HEAD" ? null : b;
+  return b === "" ? null : b;
 }
 
 /**
@@ -20,6 +24,12 @@ export async function repoRoot(cwd: string): Promise<string | null> {
   const r = await run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd });
   if (!r.ok) return null;
   return dirname(r.stdout.trim());
+}
+
+/** True if `ref` resolves to a commit — an unborn branch (fresh repo, no commits) or a typo does not. */
+export async function refHasCommit(root: string, ref: string): Promise<boolean> {
+  const r = await run(["git", "-C", root, "rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+  return r.ok;
 }
 
 export async function localBranchExists(root: string, branch: string): Promise<boolean> {

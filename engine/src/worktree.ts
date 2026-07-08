@@ -2,7 +2,7 @@
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { addWorktree, fetchBase, localBranchExists, remoteRefExists, repoRoot } from "./git";
+import { addWorktree, fetchBase, localBranchExists, refHasCommit, remoteRefExists, repoRoot } from "./git";
 import { log } from "./log";
 
 export interface WorktreePlan {
@@ -32,6 +32,14 @@ export async function planWorktree(
 
   await fetchBase(root, base);
   const startPoint = (await remoteRefExists(root, base)) ? `origin/${base}` : base;
+  if (!(await refHasCommit(root, startPoint))) {
+    return {
+      error:
+        `Base '${startPoint}' has no commits to branch from. ` +
+        `In a brand-new repo, make an initial commit first (git commit); ` +
+        `otherwise check the base branch name in steckling.yml (worktrees.base).`,
+    };
+  }
   return { repoRoot: root, worktreePath, startPoint };
 }
 
