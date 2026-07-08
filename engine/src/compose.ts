@@ -4,6 +4,8 @@
  * interpolate them (e.g. `ports: ["${STECKLING_PORT_POSTGRES}:5432"]`).
  */
 
+import { readFileSync } from "node:fs";
+import { parse as parseYaml } from "yaml";
 import { run, type RunResult } from "./sh";
 
 export interface ComposeContext {
@@ -16,6 +18,25 @@ export interface ComposeContext {
 
 function args(ctx: ComposeContext, rest: string[]): string[] {
   return ["compose", "-p", ctx.project, "-f", ctx.file, ...rest];
+}
+
+/**
+ * True if the compose file declares at least one service. `docker compose`
+ * errors on an empty file ("no service selected"), but a services-less setup
+ * (e.g. a fresh `steck init` with no presets picked) is valid — the lifecycle
+ * skips Docker entirely for it. Unreadable/invalid files return true so docker
+ * compose itself gets to report the real error.
+ */
+export function composeFileHasServices(file: string): boolean {
+  try {
+    const doc = parseYaml(readFileSync(file, "utf8"));
+    if (typeof doc !== "object" || doc === null) return false;
+    const services = (doc as Record<string, unknown>)["services"];
+    if (typeof services !== "object" || services === null) return false;
+    return Object.keys(services).length > 0;
+  } catch {
+    return true;
+  }
 }
 
 /** Bring the stack up detached and wait for healthchecks. */

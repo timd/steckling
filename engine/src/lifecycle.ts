@@ -6,6 +6,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
+  composeFileHasServices,
   composePort,
   composeStop,
   composeUp,
@@ -181,12 +182,16 @@ export async function up(opts: UpOptions): Promise<number> {
   const { vars, composeEnv } = resolveEnv(ctx.config, ports);
 
   if (status !== "up") {
-    log.info(`Starting services for ${c.bold(ctx.branch)} → project ${c.bold(ctx.names.project)} …`);
-    const composeCtx: ComposeContext = { ...base, env: composeEnv };
-    const r = await composeUp(composeCtx);
-    if (!r.ok) {
-      log.error("docker compose up failed:\n" + (r.stderr || r.stdout));
-      return 1;
+    if (composeFileHasServices(ctx.composeFile)) {
+      log.info(`Starting services for ${c.bold(ctx.branch)} → project ${c.bold(ctx.names.project)} …`);
+      const composeCtx: ComposeContext = { ...base, env: composeEnv };
+      const r = await composeUp(composeCtx);
+      if (!r.ok) {
+        log.error("docker compose up failed:\n" + (r.stderr || r.stdout));
+        return 1;
+      }
+    } else {
+      log.info(`No services in ${c.bold(ctx.config.services.compose)} — skipping Docker.`);
     }
   }
 
@@ -241,6 +246,10 @@ export async function down(cwd?: string): Promise<number> {
   if ("error" in ctx) {
     log.error(ctx.error);
     return 1;
+  }
+  if (!composeFileHasServices(ctx.composeFile)) {
+    log.info(`No services in ${c.bold(ctx.config.services.compose)} — nothing to stop.`);
+    return 0;
   }
   const composeCtx: ComposeContext = {
     project: ctx.names.project,
