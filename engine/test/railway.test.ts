@@ -13,7 +13,7 @@ function withAgent(agent: NonNullable<StecklingConfig["agent"]>): StecklingConfi
     services: { compose: "./c.yml", expose: {} },
     env: { mode: "dotenv", extra: {} },
     app: { run: "true" },
-    hooks: { provision: "", teardown: "" },
+    hooks: { provision: "", postCreate: "", teardown: "" },
     agent,
     deploy: { target: "railway", needs: [], env: {} },
   };

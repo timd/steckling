@@ -11,6 +11,9 @@ let you act on another branch by name.
 ### `steck new <branch> [base]`
 
 Create a git worktree for a new branch and allocate its service ports (recorded in the registry).
+If a `ticket` block is configured, the ticket ID is parsed from the branch name and recorded too;
+then the `postCreate` hook runs in the new worktree with the identity env
+(`STECKLING_BRANCH`/`STECKLING_TICKET`, …) — a failing hook warns but keeps the worktree.
 
 - `base` — branch to fork from (default: `worktrees.base`, usually `main`). Uses `origin/<base>`
   if it exists, else the local `<base>`.
@@ -22,10 +25,12 @@ Flags:
 
 - `--up` — bring services up immediately after creating.
 - `--no-run` — with `--up`, bring services up but don't run the app.
+- `--ticket <id>` — record a ticket ID explicitly (overrides parsing the branch name).
 
 ```sh
 steck new feature/PLA-123
 steck new hotfix/login main --up --no-run
+steck new spike/cleanup --ticket ENG-456
 ```
 
 ---
@@ -70,24 +75,28 @@ Requires `steck up` to have been run at least once (so `.steckling/env` exists).
 ### `steck list`
 
 Table of every registered worktree: branch, live status (`up`/`stopped`/`down`), host ports, and
-path. `(missing)` flags a worktree whose folder is gone. Status is reconciled against Docker.
+path — plus a TICKET column once any worktree carries a ticket. `(missing)` flags a worktree whose
+folder is gone. Status is reconciled against Docker.
 
 ---
 
 ### `steck status [branch]`
 
-Detail for one worktree — branch, compose project, status, ports, the `.steckling/env` path, and
-last-used time. Defaults to the current branch; pass a branch name to inspect another.
+Detail for one worktree — branch, compose project, status, ticket (with its rendered `ticket.url`
+link, when configured), ports, the `.steckling/env` path, and last-used time. Defaults to the
+current branch; pass a branch name to inspect another.
 
 ---
 
 ### `steck rm [branch] [--yes] [--force]`
 
 Destroy a branch's stack: removes its containers, **named volumes (data loss)**, and registry
-entry. Leaves the worktree folder and git branch intact.
+entry. Leaves the worktree folder and git branch intact. The `teardown` hook (if configured) runs
+in the worktree first, with `.steckling/env` + the identity vars loaded — a non-zero exit
+**aborts the rm** so a cleanup step can't be silently lost.
 
 - `--yes`/`-y` — skip the confirmation prompt (required when non-interactive).
-- `--force` — allow removing the base branch's stack (refused by default).
+- `--force` — allow removing the base branch's stack, and proceed past a failing `teardown` hook.
 - `[branch]` — target another branch without checking it out (defaults to current).
 
 ```sh
@@ -104,6 +113,10 @@ To also remove the folder + branch afterwards:
 Find worktrees whose branch is **merged into base**, **deleted**, or whose **folder is missing**,
 and reclaim their stacks (containers + volumes + registry entry). Lists candidates first; pass
 `--yes` to skip the prompt. Leaves folders and branches intact.
+
+The `teardown` hook runs per branch before its stack is destroyed. Unlike `rm`, a failing hook
+only **skips that branch** (left un-pruned, with a warning) — one broken hook doesn't wedge the
+whole batch.
 
 ---
 

@@ -62,10 +62,27 @@ export const StecklingConfigSchema = z
     hooks: z
       .object({
         provision: z.string().default(""),
+        postCreate: z.string().default(""),
         teardown: z.string().default(""),
       })
       .strict()
       .default({}),
+    // Ticket identity (opt-in). The engine only parses + carries the ID — it
+    // never calls a ticketing service; transitions live in hook strings.
+    ticket: z
+      .object({
+        pattern: z.string().min(1),
+        url: z
+          .string()
+          .min(1)
+          .refine((s) => s.includes("{ticket}"), {
+            message: "url must contain the {ticket} placeholder",
+          })
+          .optional(),
+        env: z.string().min(1).default("STECKLING_TICKET"),
+      })
+      .strict()
+      .optional(),
     // Remote agent deployment (Path 1). Optional and additive: a config without
     // these blocks behaves exactly as before.
     agent: z
@@ -96,6 +113,17 @@ export const StecklingConfigSchema = z
   })
   .strict()
   .superRefine((cfg, ctx) => {
+    if (cfg.ticket) {
+      try {
+        new RegExp(cfg.ticket.pattern);
+      } catch (e) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ticket", "pattern"],
+          message: `\`ticket.pattern\` is not a valid regular expression: ${(e as Error).message}`,
+        });
+      }
+    }
     if (cfg.deploy && !cfg.agent) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

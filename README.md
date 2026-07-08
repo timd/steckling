@@ -46,6 +46,19 @@ Three moving parts, and deliberately nothing more:
 
 Steckling never runs your app for you and knows nothing about your framework. → [Concepts](docs/concepts.md)
 
+**Plays well with your ticket tracker.** Steckling can parse a ticket ID out of your branch name
+(`tim/eng-123-fix-login` → `ENG-123`), remember it, show it in `steck list`, inject it into every
+hook as `$STECKLING_TICKET`, and expose it over MCP — so "one ticket, one branch, one isolated
+stack, one agent" is a config block, not a platform. If your tracker generates branch names, it
+already works ([recipe](docs/recipes/ticket-trackers.md)); nothing in the engine knows which
+tracker you use.
+
+```yaml
+ticket:
+  pattern: "eng-\\d+"
+  url: "https://linear.app/acme/issue/{ticket}"
+```
+
 ## Install
 
 > Requires **git** and **Docker**. The CLI is a single self-contained binary — no runtime to install.

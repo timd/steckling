@@ -38,7 +38,16 @@ app:
 
 hooks:
   provision: "npm run migrate && npm run seed" # run once on first boot (and on --reprovision)
-  teardown: "" # optional; reserved for pre-rm cleanup
+  postCreate: "" # optional; runs after `steck new` creates the worktree
+  teardown: "" # optional; runs before `steck rm`/`steck prune` destroy the stack
+
+# Ticket identity (optional, opt-in). Steckling parses the ticket ID out of the
+# branch name, remembers it, shows it in `steck list`, and injects it into hooks
+# and the app as $STECKLING_TICKET. It never calls the tracker's API.
+ticket:
+  pattern: "eng-\\d+" # regex, matched case-insensitively against the branch name
+  url: "https://linear.app/acme/issue/{ticket}" # optional; must contain {ticket}
+  env: STECKLING_TICKET # optional; the env var name the ID is injected under
 
 # Remote agent deploy (optional — Path 1; see deploy-railway.md)
 agent:
@@ -74,7 +83,11 @@ deploy:
 | `app.run` | yes | — | Start command, run via `sh -c` with the branch env. |
 | `app.port.env` / `app.port.base` | no | — | Allocate + inject a host port for the app. |
 | `hooks.provision` | no | `""` | Runs once after services are healthy (tracked by `.steckling/.provisioned`). |
-| `hooks.teardown` | no | `""` | Reserved. |
+| `hooks.postCreate` | no | `""` | Runs in the new worktree after `steck new` (identity env only — no services yet). A failure warns; the worktree is kept. |
+| `hooks.teardown` | no | `""` | Runs before `steck rm` / `steck prune` destroy a stack. A failure aborts `rm` (unless `--force`) and skips that branch in `prune`. |
+| `ticket.pattern` | no | — | Regex; first match against the branch name (case-insensitive — JS regexes have no inline `(?i)`) becomes the ticket ID. No block → no parsing. |
+| `ticket.url` | no | — | Link template; **must** contain `{ticket}`. Rendered into `STECKLING_TICKET_URL` and `steck status`. |
+| `ticket.env` | no | `STECKLING_TICKET` | Env var name the ticket ID is injected under. |
 | `agent` | no | — | Optional; enables `steck deploy`. See [Deploy to Railway](deploy-railway.md). |
 | `agent.kind` | no | `service` | `service` (always-on) or `scheduled` (cron; needs `schedule`). |
 | `agent.start` | yes† | — | Container start command (†required when `agent` is set). |
@@ -105,6 +118,20 @@ For each exposed service, Steckling:
 `<SERVICE_NAME>` is the upper-cased service key with non-alphanumerics replaced by `_`
 (so `postgres` → `STECKLING_PORT_POSTGRES`).
 
+## Injected identity vars
+
+Alongside the service URLs, every branch env (`.steckling/env`, hooks, `app.run`, `exec`) gets:
+
+| Var | Value |
+| --- | --- |
+| `STECKLING_BRANCH` | the branch name |
+| `STECKLING_PROJECT` | the compose project name |
+| `STECKLING_TICKET`* | the ticket ID, when one is parsed or set (`*`name configurable via `ticket.env`) |
+| `STECKLING_TICKET_URL` | `ticket.url` rendered for the ticket, when both exist |
+
+If an `env.extra` key collides with an injected var, **`env.extra` wins** (explicit config beats
+engine values) and `steck up` prints a warning.
+
 ## Placeholders
 
 | Placeholder | Where | Resolves to |
@@ -112,3 +139,4 @@ For each exposed service, Steckling:
 | `{repo}` | `worktrees.dir` | repo folder name |
 | `{port}` | `services.expose.*.url` | that service's allocated host port |
 | `{app_port}` | `env.extra.*` values | the app's allocated host port |
+| `{ticket}` | `ticket.url` | the parsed/recorded ticket ID |

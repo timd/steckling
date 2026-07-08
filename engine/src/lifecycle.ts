@@ -14,7 +14,7 @@ import {
   type ComposeContext,
 } from "./compose";
 import { formatConfigError, loadConfig, type StecklingConfig } from "./config";
-import { portPlaceholders, readDotenv, resolveEnv, stecklingDir, writeDotenv } from "./env";
+import { metaVars, portPlaceholders, readDotenv, resolveEnv, stecklingDir, writeDotenv } from "./env";
 import {
   currentBranch,
   isMerged,
@@ -35,6 +35,7 @@ import {
   type WorktreeRecord,
 } from "./registry";
 import { runInherit } from "./sh";
+import { parseTicket, ticketUrl } from "./ticket";
 import { createWorktree, planWorktree } from "./worktree";
 
 interface Context {
@@ -178,7 +179,18 @@ export async function up(opts: UpOptions): Promise<number> {
     });
   }
 
-  const { vars, composeEnv } = resolveEnv(ctx.config, ports);
+  // Ticket identity: an explicit/recorded value wins; otherwise parse the
+  // branch name (this also backfills records created before the ticket field).
+  const ticket = record?.ticket ?? parseTicket(ctx.config, ctx.branch) ?? undefined;
+
+  const { vars, composeEnv, collisions } = resolveEnv(ctx.config, ports, {
+    branch: ctx.branch,
+    project: ctx.names.project,
+    ...(ticket ? { ticket } : {}),
+  });
+  for (const key of collisions) {
+    log.warn(`env.extra overrides the injected ${key} (explicit config wins).`);
+  }
 
   if (status !== "up") {
     log.info(`Starting services for ${c.bold(ctx.branch)} → project ${c.bold(ctx.names.project)} …`);
@@ -206,6 +218,8 @@ export async function up(opts: UpOptions): Promise<number> {
       ports: portsRecordFrom(ports),
       createdAt: existing?.createdAt ?? now,
       lastUsedAt: now,
+      ...(ticket ? { ticket } : {}),
+      ...(existing?.railway ? { railway: existing.railway } : {}),
     };
   });
 
@@ -280,6 +294,8 @@ export async function execCmd(cmd: string[]): Promise<number> {
 interface NewOptions {
   up: boolean;
   noRun: boolean;
+  /** Explicit ticket ID — overrides parsing the branch name. */
+  ticket?: string;
 }
 
 export async function newWorktree(
@@ -316,6 +332,7 @@ export async function newWorktree(
     reserved: reservedPorts(reg),
   });
 
+  const ticket = opts.ticket ?? parseTicket(cfg, branch) ?? undefined;
   const now = new Date().toISOString();
   await updateRegistry((r) => {
     r.worktrees[names.project] = {
@@ -326,9 +343,22 @@ export async function newWorktree(
       ports: portsRecordFrom(ports),
       createdAt: now,
       lastUsedAt: now,
+      ...(ticket ? { ticket } : {}),
     };
   });
   log.ok(`Allocated ports: ${portsSummary(ports, serviceNames)}`);
+  if (ticket) log.info(`Ticket: ${c.bold(ticket)}`);
+
+  // postCreate runs before any services exist — identity vars only, no service
+  // URLs. A failure keeps the worktree (the hook is a side effect, not setup).
+  if (cfg.hooks.postCreate.trim() !== "") {
+    log.info(`postCreate: ${c.dim(cfg.hooks.postCreate)}`);
+    const env = metaVars(cfg, { branch, project: names.project, ...(ticket ? { ticket } : {}) });
+    const code = await runHook(cfg.hooks.postCreate, plan.worktreePath, env);
+    if (code !== null && code !== 0) {
+      log.warn(`postCreate hook exited ${code} — continuing (worktree kept).`);
+    }
+  }
 
   if (opts.up) {
     process.chdir(plan.worktreePath);
@@ -358,15 +388,20 @@ export async function list(): Promise<number> {
     return 0;
   }
 
+  // The TICKET column only appears once something actually carries a ticket.
+  const showTicket = entries.some((w) => w.ticket);
+  const ticketHead = showTicket ? `${c.bold("TICKET".padEnd(12))} ` : "";
+
   console.log("");
   console.log(
-    `  ${c.bold("BRANCH".padEnd(26))} ${c.bold("STATUS".padEnd(8))} ${c.bold("PORTS".padEnd(26))} PATH`,
+    `  ${c.bold("BRANCH".padEnd(26))} ${c.bold("STATUS".padEnd(8))} ${ticketHead}${c.bold("PORTS".padEnd(26))} PATH`,
   );
   for (const w of entries) {
     const st = await projectStatus(w.project);
     const note = existsSync(w.path) ? "" : c.red(" (missing)");
+    const ticketCell = showTicket ? `${(w.ticket ?? "").padEnd(12)} ` : "";
     console.log(
-      `  ${w.branch.padEnd(26)} ${statusCell(st)} ${portsCell(w).padEnd(26)} ${c.dim(w.path)}${note}`,
+      `  ${w.branch.padEnd(26)} ${statusCell(st)} ${ticketCell}${portsCell(w).padEnd(26)} ${c.dim(w.path)}${note}`,
     );
   }
   console.log("");
@@ -381,6 +416,7 @@ export interface WorktreeSnapshot {
   path: string;
   pathExists: boolean;
   lastUsedAt: string;
+  ticket?: string;
 }
 
 /** Structured registry view with live status — for the MCP resource + tools (no console output). */
@@ -397,6 +433,7 @@ export async function snapshot(): Promise<WorktreeSnapshot[]> {
       path: w.path,
       pathExists: existsSync(w.path),
       lastUsedAt: w.lastUsedAt,
+      ...(w.ticket ? { ticket: w.ticket } : {}),
     });
   }
   return out.sort((a, b) => a.branch.localeCompare(b.branch));
@@ -435,6 +472,11 @@ export async function status(branchArg?: string): Promise<number> {
   if (record) {
     const missing = existsSync(record.path) ? "" : c.red("  (missing)");
     console.log(`  path      ${record.path}${missing}`);
+    if (record.ticket) {
+      const cfgRes = await loadConfig();
+      const url = cfgRes.ok ? ticketUrl(cfgRes.config, record.ticket) : null;
+      console.log(`  ticket    ${record.ticket}${url ? `  ${c.dim(url)}` : ""}`);
+    }
     console.log(`  ports     ${portsCell(record).replace(/,/g, "  ")}`);
     const envFile = join(record.path, ".steckling", "env");
     console.log(`  env       ${existsSync(envFile) ? envFile : c.dim("(not written yet)")}`);
@@ -494,6 +536,31 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
     return 0;
   }
 
+  const teardown = cfg.hooks.teardown.trim();
+  if (teardown !== "" && record) {
+    if (existsSync(record.path)) {
+      log.info(`teardown: ${c.dim(teardown)}`);
+      const env = {
+        ...(readDotenv(record.path) ?? {}),
+        ...metaVars(cfg, {
+          branch,
+          project,
+          ...(record.ticket ? { ticket: record.ticket } : {}),
+        }),
+      };
+      const code = await runHook(teardown, record.path, env);
+      if (code !== null && code !== 0) {
+        if (!opts.force) {
+          log.error(`teardown hook exited ${code} — aborting rm (pass --force to skip it).`);
+          return code;
+        }
+        log.warn(`teardown hook exited ${code} — continuing (--force).`);
+      }
+    } else {
+      log.warn("Worktree folder missing — skipping the teardown hook.");
+    }
+  }
+
   const d = await destroyProject(project);
   await updateRegistry((r) => {
     delete r.worktrees[project];
@@ -548,13 +615,34 @@ export async function prune(opts: PruneOptions): Promise<number> {
     return 0;
   }
 
+  const teardown = cfg.hooks.teardown.trim();
+  let skipped = 0;
   for (const { record } of candidates) {
+    // A failing teardown skips just this branch (left un-pruned) — one broken
+    // hook must not wedge the whole batch.
+    if (teardown !== "" && existsSync(record.path)) {
+      const env = {
+        ...(readDotenv(record.path) ?? {}),
+        ...metaVars(cfg, {
+          branch: record.branch,
+          project: record.project,
+          ...(record.ticket ? { ticket: record.ticket } : {}),
+        }),
+      };
+      const code = await runHook(teardown, record.path, env);
+      if (code !== null && code !== 0) {
+        log.warn(`teardown hook exited ${code} for ${record.branch} — skipped (left un-pruned).`);
+        skipped++;
+        continue;
+      }
+    }
     const d = await destroyProject(record.project);
     await updateRegistry((r) => {
       delete r.worktrees[record.project];
     });
     log.ok(`pruned ${record.branch} — ${d.containers} container(s), ${d.volumes} volume(s)`);
   }
+  if (skipped > 0) log.warn(`${skipped} worktree(s) skipped — their teardown hooks failed.`);
   await worktreePrune(root);
   return 0;
 }

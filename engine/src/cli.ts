@@ -1,9 +1,6 @@
 #!/usr/bin/env bun
 /**
  * Steckling CLI entrypoint — argument dispatch.
- *
- * M0 implements `doctor` and `config`; the lifecycle commands are registered
- * but stubbed until later milestones (see docs/plan.md §11).
  */
 
 import { loadConfig, formatConfigError } from "./config";
@@ -20,6 +17,7 @@ ${c.bold("Usage:")} steck <command> [options]
 
 ${c.bold("Commands:")}
   new <branch> [base]   Create a worktree + allocate its service ports
+                        (--ticket <id> to record a ticket explicitly)
   up [--no-run]         Bring up services, provision, run the app
   down                  Stop this branch's containers (keeps data)
   list                  Show every worktree, its ports + status
@@ -81,16 +79,33 @@ async function main(): Promise<number> {
       return execCmd(rest[0] === "--" ? rest.slice(1) : rest);
     }
     case "new": {
-      const positional = argv.slice(1).filter((a) => !a.startsWith("-"));
-      const flags = argv.slice(1).filter((a) => a.startsWith("-"));
+      const rest = argv.slice(1);
+      const positional: string[] = [];
+      const flags: string[] = [];
+      let ticket: string | undefined;
+      for (let i = 0; i < rest.length; i++) {
+        const a = rest[i]!;
+        if (a === "--ticket") {
+          ticket = rest[++i];
+          if (!ticket || ticket.startsWith("-")) {
+            log.error("--ticket requires a value, e.g. --ticket ENG-123");
+            return 1;
+          }
+        } else if (a.startsWith("-")) {
+          flags.push(a);
+        } else {
+          positional.push(a);
+        }
+      }
       const branch = positional[0];
       if (!branch) {
-        log.error("Usage: steck new <branch> [base] [--up] [--no-run]");
+        log.error("Usage: steck new <branch> [base] [--up] [--no-run] [--ticket <id>]");
         return 1;
       }
       return newWorktree(branch, positional[1], {
         up: flags.includes("--up"),
         noRun: flags.includes("--no-run"),
+        ...(ticket ? { ticket } : {}),
       });
     }
     case "list":

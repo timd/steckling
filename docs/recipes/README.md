@@ -16,6 +16,7 @@ The contract is always the same:
 - [Ruby on Rails](rails.md)
 - [Django](django.md)
 - [Go](go.md)
+- [Ticket trackers](ticket-trackers.md) — branch = ticket = stack (Linear, Jira, GitHub Issues, …)
 
 Using a stack that's not here? Any of the above transfers directly — swap `app.run` and the
 provision hook for your framework's equivalents. PRs adding recipes are welcome.

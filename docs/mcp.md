@@ -38,7 +38,7 @@ Running from source instead of a binary? Use Bun:
 
 | URI | Description |
 | --- | --- |
-| `steckling://registry` | JSON snapshot of every worktree: branch, project, live status (up/stopped/down), host ports, path. |
+| `steckling://registry` | JSON snapshot of every worktree: branch, project, live status (up/stopped/down), host ports, path, and ticket ID (when a `ticket` block is configured). |
 
 **Tools**
 
@@ -52,6 +52,11 @@ Running from source instead of a binary? Use Bun:
 
 `steckling_up`/`steckling_down` target a branch by looking up its worktree path in the registry,
 so the agent can manage any branch without changing directories.
+
+With a `ticket` block configured, each worktree's ticket ID rides along in the registry resource
+and tool output — an orchestrating agent that also has your tracker's MCP server can map issues
+to stacks directly ("one ticket, one branch, one stack, one agent"). See the
+[ticket-trackers recipe](recipes/ticket-trackers.md).
 
 ## Notes
 

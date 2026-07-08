@@ -38,7 +38,8 @@ TypeScript on [Bun](https://bun.sh). One small, single-purpose module per concer
 | `compose.ts` | `docker compose -p <project>` up/stop/down/port/status wrapper. |
 | `env.ts` | Resolve service URLs, write `.steckling/env`, build child-process env. |
 | `lifecycle.ts` | Orchestration for `new`/`up`/`down`/`rm`/`prune`/`list`/`status`. |
-| `hooks.ts` | Run the `provision`/`teardown` hooks with injected env. |
+| `hooks.ts` | Run the `provision`/`postCreate`/`teardown` hooks with injected env. |
+| `ticket.ts` | Parse a ticket ID from the branch name (`ticket.pattern`), render `ticket.url`. |
 | `mcp/server.ts` | Thin MCP wrapper over `lifecycle` + a `steckling://registry` resource. |
 | `git.ts`, `sh.ts`, `capture.ts`, `log.ts`, `doctor.ts`, `version.ts` | git helpers, process exec, logging/colour, pre-flight checks, version. |
 
@@ -47,8 +48,8 @@ TypeScript on [Bun](https://bun.sh). One small, single-purpose module per concer
 state everything reconciles against — `steck list`/`status` and the MCP resource both read it,
 and it's reconciled against `docker ps` on read so a crash can't desync it.
 
-All commands in `cli.ts` are implemented (the "stubbed until a later milestone" comment there is
-stale — `up`/`down`/`new`/`list`/`status`/`rm`/`prune`/`mcp` all dispatch to real code).
+All commands in `cli.ts` are implemented — `up`/`down`/`new`/`list`/`status`/`rm`/`prune`/`mcp`
+all dispatch to real code.
 
 ## Config contract — `steckling.yml`
 
