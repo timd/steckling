@@ -9,6 +9,7 @@
 import { loadConfig, formatConfigError } from "./config";
 import { deploy, deployDestroy, deployLogs, deployStatus } from "./deploy";
 import { runDoctor } from "./doctor";
+import { init } from "./init";
 import { down, execCmd, list, newWorktree, prune, rm, status, up } from "./lifecycle";
 import { startMcp } from "./mcp/server";
 import { c, log } from "./log";
@@ -19,6 +20,7 @@ const HELP = `${c.bold("steck")} v${version} — a worktree + isolated Docker st
 ${c.bold("Usage:")} steck <command> [options]
 
 ${c.bold("Commands:")}
+  init [--yes]          Set up this repo (interactive wizard; --yes writes defaults)
   new <branch> [base]   Create a worktree + allocate its service ports
   up [--no-run]         Bring up services, provision, run the app
   down                  Stop this branch's containers (keeps data)
@@ -66,6 +68,10 @@ async function main(): Promise<number> {
   }
 
   switch (cmd) {
+    case "init": {
+      const flags = argv.slice(1);
+      return init({ yes: flags.includes("--yes") || flags.includes("-y") });
+    }
     case "doctor":
       return runDoctor();
     case "config":

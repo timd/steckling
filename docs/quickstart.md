@@ -17,6 +17,15 @@ steck doctor
 
 ## 2. Add two files to your repo
 
+The fast way — answer a few prompts and both files (plus the `.gitignore` entry) are written
+for you:
+
+```sh
+steck init
+```
+
+Or by hand:
+
 **`steckling.yml`** (at the repo root):
 
 ```yaml

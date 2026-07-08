@@ -8,6 +8,28 @@ let you act on another branch by name.
 
 ---
 
+### `steck init [--yes]`
+
+Set up the current repo interactively — the wizard writes everything `steck up` needs, so you
+never have to hand-edit YAML to get started:
+
+- **`steckling.yml`** — built from your answers (services, app command, app port, provision
+  hook, base branch, `copyOnCreate` files). Detected values (run command from `package.json`/
+  `Cargo.toml`/`go.mod`/…, `.env*` files, base branch) are offered as defaults.
+- **`compose.steckling.yml`** — generated from service presets (Postgres, MySQL, Redis,
+  MongoDB, RabbitMQ), each pre-wired with the right `STECKLING_PORT_*` variable, a healthcheck,
+  and a data volume. If the repo already has a compose file you can point at it instead — the
+  wizard reads its services and prints the `ports:` edits it needs.
+- **`.gitignore`** — gets `.steckling/` appended if missing.
+
+The generated config is validated before `init` exits. Refuses to overwrite an existing
+`steckling.yml`.
+
+- `--yes`/`-y` — skip the wizard and write a default setup (Postgres + detected run command).
+  Required when running non-interactively.
+
+---
+
 ### `steck new <branch> [base]`
 
 Create a git worktree for a new branch and allocate its service ports (recorded in the registry).

@@ -31,6 +31,7 @@ TypeScript on [Bun](https://bun.sh). One small, single-purpose module per concer
 | --- | --- |
 | `cli.ts` | Arg parsing + command dispatch (the entrypoint). |
 | `config.ts` | Load + validate `steckling.yml` (zod schema). |
+| `init.ts` | `steck init` — interactive wizard that writes `steckling.yml` / `compose.steckling.yml`. |
 | `naming.ts` | branch → slug + 6-char hash → stable compose project name. |
 | `ports.ts` | Hash-preferred port-block allocation with free-scan fallback. |
 | `registry.ts` | `~/.steckling/registry.json` — the single source of truth (locked, atomic writes). |
