@@ -103,29 +103,34 @@ last-used time. Defaults to the current branch; pass a branch name to inspect an
 
 ---
 
-### `steck rm [branch] [--yes] [--force]`
+### `steck rm [branch] [--yes] [--force] [--purge]`
 
 Destroy a branch's stack: removes its containers, **named volumes (data loss)**, and registry
-entry. Leaves the worktree folder and git branch intact.
+entry. Leaves the worktree folder and git branch intact unless `--purge`.
 
 - `--yes`/`-y` — skip the confirmation prompt (required when non-interactive).
-- `--force` — allow removing the base branch's stack (refused by default).
+- `--force` — allow removing the base branch's stack (refused by default); with `--purge`,
+  also override the dirty-worktree and unmerged-branch safety checks.
+- `--purge` — additionally remove the worktree folder and delete the git branch. Safety: a
+  folder with uncommitted changes is kept (git refuses), and an unmerged branch is kept —
+  each with a warning telling you how to override.
 - `[branch]` — target another branch without checking it out (defaults to current).
 
 ```sh
-steck rm feature/PLA-123 --yes
+steck rm feature/PLA-123 --yes --purge
 ```
-
-To also remove the folder + branch afterwards:
-`git worktree remove <path> && git branch -D <branch>`.
 
 ---
 
-### `steck prune [--yes]`
+### `steck prune [--yes] [--purge]`
 
 Find worktrees whose branch is **merged into base**, **deleted**, or whose **folder is missing**,
 and reclaim their stacks (containers + volumes + registry entry). Lists candidates first; pass
-`--yes` to skip the prompt. Leaves folders and branches intact.
+`--yes` to skip the prompt.
+
+With `--purge`, also removes each candidate's worktree folder and deletes its branch — the
+post-merge one-liner that leaves nothing behind. Same safety rules as `rm --purge`: dirty
+folders and branches git can't confirm as merged are kept with a warning.
 
 ---
 

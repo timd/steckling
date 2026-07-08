@@ -90,9 +90,10 @@ steck status      # detail for the current worktree
 ## 5. Clean up
 
 ```sh
-steck down        # stop, keep data
-steck rm          # destroy this branch's containers + volumes (asks first)
-steck prune       # reclaim merged/deleted branches' stacks (asks first)
+steck down            # stop, keep data
+steck rm              # destroy this branch's containers + volumes (asks first)
+steck prune           # reclaim merged/deleted branches' stacks (asks first)
+steck prune --purge   # …and also remove their worktree folders + git branches
 ```
 
 ## Run many branches at once

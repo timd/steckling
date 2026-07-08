@@ -18,9 +18,11 @@ import { formatConfigError, loadConfig, type StecklingConfig } from "./config";
 import { portPlaceholders, readDotenv, resolveEnv, stecklingDir, writeDotenv } from "./env";
 import {
   currentBranch,
+  deleteBranch,
   isMerged,
   localBranchExists,
   remoteRefExists,
+  removeWorktree,
   repoRoot,
   worktreePrune,
 } from "./git";
@@ -86,6 +88,38 @@ function confirm(question: string): boolean {
 
 async function baseRefFor(root: string, base: string): Promise<string> {
   return (await remoteRefExists(root, base)) ? `origin/${base}` : base;
+}
+
+function firstLine(s: string): string {
+  return s.split("\n")[0] ?? s;
+}
+
+/**
+ * The `--purge` half of rm/prune: remove the worktree folder (git refuses a
+ * dirty one unless `force`) and delete the branch (-D only when we've verified
+ * it's merged, or on `force`; otherwise -d and git decides). Failures warn and
+ * keep — purge never turns a safety refusal into an error exit.
+ */
+async function purgeWorktree(
+  root: string,
+  branch: string,
+  path: string | undefined,
+  opts: { merged: boolean; force: boolean },
+): Promise<void> {
+  if (path && existsSync(path)) {
+    const r = await removeWorktree(root, path, opts.force);
+    if (r.ok) log.ok(`Removed folder ${path}`);
+    else {
+      log.warn(`Kept folder ${path}: ${firstLine(r.stderr || r.stdout)}`);
+      log.info(`Remove it manually with: git worktree remove ${opts.force ? "" : "--force "}"${path}"`);
+    }
+  }
+  await worktreePrune(root);
+  if (await localBranchExists(root, branch)) {
+    const r = await deleteBranch(root, branch, opts.merged || opts.force);
+    if (r.ok) log.ok(`Deleted branch ${branch}`);
+    else log.warn(`Kept branch ${branch}: ${firstLine(r.stderr || r.stdout)}`);
+  }
 }
 
 function recordToAllocation(rec: WorktreeRecord): PortAllocation {
@@ -458,6 +492,8 @@ export async function status(branchArg?: string): Promise<number> {
 interface RmOptions {
   yes: boolean;
   force: boolean;
+  /** Also remove the worktree folder and delete the git branch. */
+  purge: boolean;
 }
 
 export async function rm(branchArg: string | undefined, opts: RmOptions): Promise<number> {
@@ -497,7 +533,11 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
   log.warn(`This DESTROYS the stack for ${c.bold(branch)} (project ${project}):`);
   console.log("  • containers + named volumes  (DATA LOSS)");
   console.log("  • its registry entry");
-  console.log(`  ${c.dim("the worktree folder and git branch are left intact")}`);
+  if (opts.purge) {
+    console.log("  • the worktree folder + the git branch");
+  } else {
+    console.log(`  ${c.dim("the worktree folder and git branch are left intact")}`);
+  }
   if (!opts.yes && !confirm("Proceed? (yes/no) ")) {
     log.info("Cancelled.");
     return 0;
@@ -508,7 +548,12 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
     delete r.worktrees[project];
   });
   log.ok(`Removed ${d.containers} container(s), ${d.volumes} volume(s), ${d.networks} network(s).`);
-  if (record && existsSync(record.path)) {
+
+  if (opts.purge) {
+    const root = (await repoRoot(process.cwd())) ?? process.cwd();
+    const merged = await isMerged(root, branch, await baseRefFor(root, cfg.worktrees.base));
+    await purgeWorktree(root, branch, record?.path, { merged, force: opts.force });
+  } else if (record && existsSync(record.path)) {
     log.info(`Worktree kept at ${record.path}  (remove with: git worktree remove "${record.path}")`);
   }
   return 0;
@@ -516,6 +561,8 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
 
 interface PruneOptions {
   yes: boolean;
+  /** Also remove the worktree folders and delete the git branches. */
+  purge: boolean;
 }
 
 export async function prune(opts: PruneOptions): Promise<number> {
@@ -547,22 +594,33 @@ export async function prune(opts: PruneOptions): Promise<number> {
     return 0;
   }
 
-  log.warn(`${candidates.length} worktree(s) eligible for prune (DESTROYS containers + volumes):`);
+  const scope = opts.purge
+    ? "DESTROYS containers + volumes + worktree folders + branches"
+    : "DESTROYS containers + volumes";
+  log.warn(`${candidates.length} worktree(s) eligible for prune (${scope}):`);
   for (const { record, reason } of candidates) {
     console.log(`  • ${record.branch.padEnd(24)} ${c.dim(`(${reason})`)}  ${c.dim(record.path)}`);
   }
-  console.log(`  ${c.dim("worktree folders + git branches are left intact")}`);
+  if (!opts.purge) {
+    console.log(`  ${c.dim("worktree folders + git branches are left intact (--purge removes them too)")}`);
+  }
   if (!opts.yes && !confirm("Prune these? (yes/no) ")) {
     log.info("Cancelled.");
     return 0;
   }
 
-  for (const { record } of candidates) {
+  for (const { record, reason } of candidates) {
     const d = await destroyProject(record.project);
     await updateRegistry((r) => {
       delete r.worktrees[record.project];
     });
     log.ok(`pruned ${record.branch} — ${d.containers} container(s), ${d.volumes} volume(s)`);
+    if (opts.purge) {
+      // -D only for branches whose merged-ness the candidate check established;
+      // "folder missing" candidates may hold unmerged commits, so -d lets git refuse.
+      const merged = reason.startsWith("merged");
+      await purgeWorktree(root, record.branch, record.path, { merged, force: false });
+    }
   }
   await worktreePrune(root);
   return 0;

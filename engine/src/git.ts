@@ -66,3 +66,17 @@ export async function isMerged(root: string, branch: string, baseRef: string): P
 export async function worktreePrune(root: string): Promise<void> {
   await run(["git", "-C", root, "worktree", "prune"]);
 }
+
+/**
+ * Remove a worktree folder via git (also clears its bookkeeping). Without
+ * `force`, git refuses a dirty worktree — callers surface that refusal rather
+ * than pre-checking.
+ */
+export function removeWorktree(root: string, path: string, force = false): Promise<RunResult> {
+  return run(["git", "-C", root, "worktree", "remove", ...(force ? ["--force"] : []), path]);
+}
+
+/** Delete a local branch. `force` = -D (drops unmerged commits); otherwise -d lets git refuse. */
+export function deleteBranch(root: string, branch: string, force = false): Promise<RunResult> {
+  return run(["git", "-C", root, "branch", force ? "-D" : "-d", branch]);
+}

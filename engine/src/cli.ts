@@ -27,8 +27,8 @@ ${c.bold("Commands:")}
   list                  Show every worktree, its ports + status
   status [branch]       Detailed status of a worktree
   exec -- <cmd>         Run a command with this branch's env loaded
-  rm [branch] [--yes]   Destroy containers + volumes (asks first)
-  prune [--yes]         Clean up merged/dead branches (on confirm)
+  rm [branch] [--yes]   Destroy containers + volumes (asks first; --purge: folder+branch too)
+  prune [--yes]         Clean up merged/dead branches (--purge: folders+branches too)
   deploy [--dry-run]    Ship this branch's agent to Railway (--status to inspect)
   logs [-n N] [--build] Tail the deployed agent's logs
   destroy [--yes]       Tear down this branch's Railway deployment
@@ -111,11 +111,15 @@ async function main(): Promise<number> {
       return rm(positional[0], {
         yes: flags.includes("--yes") || flags.includes("-y"),
         force: flags.includes("--force"),
+        purge: flags.includes("--purge"),
       });
     }
     case "prune": {
       const flags = argv.slice(1).filter((a) => a.startsWith("-"));
-      return prune({ yes: flags.includes("--yes") || flags.includes("-y") });
+      return prune({
+        yes: flags.includes("--yes") || flags.includes("-y"),
+        purge: flags.includes("--purge"),
+      });
     }
     case "deploy": {
       const flags = argv.slice(1);
