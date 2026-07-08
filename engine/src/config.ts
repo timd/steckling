@@ -62,6 +62,7 @@ export const StecklingConfigSchema = z
     hooks: z
       .object({
         provision: z.string().default(""),
+        postCreate: z.string().default(""),
         teardown: z.string().default(""),
       })
       .strict()

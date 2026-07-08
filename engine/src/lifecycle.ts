@@ -14,7 +14,7 @@ import {
   type ComposeContext,
 } from "./compose";
 import { formatConfigError, loadConfig, type StecklingConfig } from "./config";
-import { portPlaceholders, readDotenv, resolveEnv, stecklingDir, writeDotenv } from "./env";
+import { metaVars, portPlaceholders, readDotenv, resolveEnv, stecklingDir, writeDotenv } from "./env";
 import {
   currentBranch,
   isMerged,
@@ -349,6 +349,17 @@ export async function newWorktree(
   log.ok(`Allocated ports: ${portsSummary(ports, serviceNames)}`);
   if (ticket) log.info(`Ticket: ${c.bold(ticket)}`);
 
+  // postCreate runs before any services exist — identity vars only, no service
+  // URLs. A failure keeps the worktree (the hook is a side effect, not setup).
+  if (cfg.hooks.postCreate.trim() !== "") {
+    log.info(`postCreate: ${c.dim(cfg.hooks.postCreate)}`);
+    const env = metaVars(cfg, { branch, project: names.project, ...(ticket ? { ticket } : {}) });
+    const code = await runHook(cfg.hooks.postCreate, plan.worktreePath, env);
+    if (code !== null && code !== 0) {
+      log.warn(`postCreate hook exited ${code} — continuing (worktree kept).`);
+    }
+  }
+
   if (opts.up) {
     process.chdir(plan.worktreePath);
     return up({ noRun: opts.noRun, reprovision: false });
@@ -525,6 +536,31 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
     return 0;
   }
 
+  const teardown = cfg.hooks.teardown.trim();
+  if (teardown !== "" && record) {
+    if (existsSync(record.path)) {
+      log.info(`teardown: ${c.dim(teardown)}`);
+      const env = {
+        ...(readDotenv(record.path) ?? {}),
+        ...metaVars(cfg, {
+          branch,
+          project,
+          ...(record.ticket ? { ticket: record.ticket } : {}),
+        }),
+      };
+      const code = await runHook(teardown, record.path, env);
+      if (code !== null && code !== 0) {
+        if (!opts.force) {
+          log.error(`teardown hook exited ${code} — aborting rm (pass --force to skip it).`);
+          return code;
+        }
+        log.warn(`teardown hook exited ${code} — continuing (--force).`);
+      }
+    } else {
+      log.warn("Worktree folder missing — skipping the teardown hook.");
+    }
+  }
+
   const d = await destroyProject(project);
   await updateRegistry((r) => {
     delete r.worktrees[project];
@@ -579,13 +615,34 @@ export async function prune(opts: PruneOptions): Promise<number> {
     return 0;
   }
 
+  const teardown = cfg.hooks.teardown.trim();
+  let skipped = 0;
   for (const { record } of candidates) {
+    // A failing teardown skips just this branch (left un-pruned) — one broken
+    // hook must not wedge the whole batch.
+    if (teardown !== "" && existsSync(record.path)) {
+      const env = {
+        ...(readDotenv(record.path) ?? {}),
+        ...metaVars(cfg, {
+          branch: record.branch,
+          project: record.project,
+          ...(record.ticket ? { ticket: record.ticket } : {}),
+        }),
+      };
+      const code = await runHook(teardown, record.path, env);
+      if (code !== null && code !== 0) {
+        log.warn(`teardown hook exited ${code} for ${record.branch} — skipped (left un-pruned).`);
+        skipped++;
+        continue;
+      }
+    }
     const d = await destroyProject(record.project);
     await updateRegistry((r) => {
       delete r.worktrees[record.project];
     });
     log.ok(`pruned ${record.branch} — ${d.containers} container(s), ${d.volumes} volume(s)`);
   }
+  if (skipped > 0) log.warn(`${skipped} worktree(s) skipped — their teardown hooks failed.`);
   await worktreePrune(root);
   return 0;
 }

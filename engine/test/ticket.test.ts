@@ -14,7 +14,7 @@ function config(overrides: Partial<StecklingConfig> = {}): StecklingConfig {
     services: { compose: "./c.yml", expose: {} },
     env: { mode: "dotenv", extra: {} },
     app: { run: "true" },
-    hooks: { provision: "", teardown: "" },
+    hooks: { provision: "", postCreate: "", teardown: "" },
     ...overrides,
   };
 }
@@ -96,6 +96,14 @@ test("schema rejects a ticket.url without the {ticket} placeholder", () => {
     ticket: { pattern: "eng-\\d+", url: "https://t.example/i/" },
   });
   expect(res.success).toBe(false);
+});
+
+test("schema accepts hooks.postCreate", () => {
+  const parsed = StecklingConfigSchema.parse({
+    ...BASE_YAMLISH,
+    hooks: { postCreate: "echo hi" },
+  });
+  expect(parsed.hooks.postCreate).toBe("echo hi");
 });
 
 // --- env injection -----------------------------------------------------------

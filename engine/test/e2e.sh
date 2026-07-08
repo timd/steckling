@@ -23,12 +23,19 @@ if [ "$BRANCH" = "HEAD" ]; then
 fi
 echo "branch under test: $BRANCH"
 
+TICKETBRANCH="eng-123-e2e-check"
+export E2E_HOOKS_LOG="$(mktemp)"
+
 cleanup() {
   ( cd "$DEMO" && "$BUN" run "$CLI" rm "$BRANCH" --yes --force >/dev/null 2>&1 || true )
+  ( cd "$DEMO" && "$BUN" run "$CLI" rm "$TICKETBRANCH" --yes --force >/dev/null 2>&1 || true )
+  git -C "$ROOT" worktree list --porcelain | grep -o "/.*$TICKETBRANCH" | head -1 | \
+    xargs -r -I{} git -C "$ROOT" worktree remove --force {} >/dev/null 2>&1 || true
+  git -C "$ROOT" branch -D "$TICKETBRANCH" >/dev/null 2>&1 || true
   docker ps -aq --filter "name=steckling_" | xargs -r docker rm -f >/dev/null 2>&1 || true
   docker volume ls -q --filter "name=steckling_" | xargs -r docker volume rm >/dev/null 2>&1 || true
   docker network ls -q --filter "name=steckling_" | xargs -r docker network rm >/dev/null 2>&1 || true
-  rm -rf "$DEMO/.steckling"
+  rm -rf "$DEMO/.steckling" "$E2E_HOOKS_LOG"
 }
 trap cleanup EXIT
 
@@ -42,6 +49,14 @@ echo "$out" | grep -q "alpha, beta, gamma" || { echo "✗ seed data missing"; ex
 
 echo "==> steck list"
 ( cd "$DEMO" && "$BUN" run "$CLI" list )
+
+echo "==> ticket + hooks (steck new/rm $TICKETBRANCH)"
+( cd "$DEMO" && "$BUN" run "$CLI" new "$TICKETBRANCH" "$BRANCH" )
+grep -q "postCreate eng-123" "$E2E_HOOKS_LOG" || { echo "✗ postCreate hook didn't run with the ticket"; exit 1; }
+listout="$( cd "$DEMO" && "$BUN" run "$CLI" list )"
+echo "$listout" | grep -q "eng-123" || { echo "✗ ticket missing from steck list"; exit 1; }
+( cd "$DEMO" && "$BUN" run "$CLI" rm "$TICKETBRANCH" --yes )
+grep -q "teardown eng-123" "$E2E_HOOKS_LOG" || { echo "✗ teardown hook didn't run on rm"; exit 1; }
 
 echo "==> MCP smoke"
 ( cd "$ENG" && "$BUN" run test/mcp-smoke.ts )
