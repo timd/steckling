@@ -59,6 +59,16 @@ The first time a branch's stack comes up, Steckling runs your `provision` hook (
 `migrate && seed`) and records a marker (`.steckling/.provisioned`). Subsequent `steck up`s skip
 it. Force it again with `steck up --reprovision`.
 
+## Ticket-aware branches (optional)
+
+Steckling keys everything off the branch name — and if your tracker generates branch names
+(most can), the branch name already contains the ticket. Give Steckling the pattern once
+(`ticket.pattern` in `steckling.yml`) and every worktree knows which ticket it serves: visible in
+`steck list`/`status`, injected into hooks and your app as `$STECKLING_TICKET`, readable by
+agents over MCP. Steckling never calls the tracker's API; transitions belong in your hook strings
+or your agent, where judgment lives. See the
+[ticket-trackers recipe](recipes/ticket-trackers.md).
+
 ## The registry
 
 `~/.steckling/registry.json` is the single source of truth: every worktree, its branch, its host
