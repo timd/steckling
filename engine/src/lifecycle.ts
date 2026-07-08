@@ -35,6 +35,7 @@ import {
   type WorktreeRecord,
 } from "./registry";
 import { runInherit } from "./sh";
+import { parseTicket, ticketUrl } from "./ticket";
 import { createWorktree, planWorktree } from "./worktree";
 
 interface Context {
@@ -178,7 +179,18 @@ export async function up(opts: UpOptions): Promise<number> {
     });
   }
 
-  const { vars, composeEnv } = resolveEnv(ctx.config, ports);
+  // Ticket identity: an explicit/recorded value wins; otherwise parse the
+  // branch name (this also backfills records created before the ticket field).
+  const ticket = record?.ticket ?? parseTicket(ctx.config, ctx.branch) ?? undefined;
+
+  const { vars, composeEnv, collisions } = resolveEnv(ctx.config, ports, {
+    branch: ctx.branch,
+    project: ctx.names.project,
+    ...(ticket ? { ticket } : {}),
+  });
+  for (const key of collisions) {
+    log.warn(`env.extra overrides the injected ${key} (explicit config wins).`);
+  }
 
   if (status !== "up") {
     log.info(`Starting services for ${c.bold(ctx.branch)} → project ${c.bold(ctx.names.project)} …`);
@@ -206,6 +218,8 @@ export async function up(opts: UpOptions): Promise<number> {
       ports: portsRecordFrom(ports),
       createdAt: existing?.createdAt ?? now,
       lastUsedAt: now,
+      ...(ticket ? { ticket } : {}),
+      ...(existing?.railway ? { railway: existing.railway } : {}),
     };
   });
 
@@ -280,6 +294,8 @@ export async function execCmd(cmd: string[]): Promise<number> {
 interface NewOptions {
   up: boolean;
   noRun: boolean;
+  /** Explicit ticket ID — overrides parsing the branch name. */
+  ticket?: string;
 }
 
 export async function newWorktree(
@@ -316,6 +332,7 @@ export async function newWorktree(
     reserved: reservedPorts(reg),
   });
 
+  const ticket = opts.ticket ?? parseTicket(cfg, branch) ?? undefined;
   const now = new Date().toISOString();
   await updateRegistry((r) => {
     r.worktrees[names.project] = {
@@ -326,9 +343,11 @@ export async function newWorktree(
       ports: portsRecordFrom(ports),
       createdAt: now,
       lastUsedAt: now,
+      ...(ticket ? { ticket } : {}),
     };
   });
   log.ok(`Allocated ports: ${portsSummary(ports, serviceNames)}`);
+  if (ticket) log.info(`Ticket: ${c.bold(ticket)}`);
 
   if (opts.up) {
     process.chdir(plan.worktreePath);
@@ -358,15 +377,20 @@ export async function list(): Promise<number> {
     return 0;
   }
 
+  // The TICKET column only appears once something actually carries a ticket.
+  const showTicket = entries.some((w) => w.ticket);
+  const ticketHead = showTicket ? `${c.bold("TICKET".padEnd(12))} ` : "";
+
   console.log("");
   console.log(
-    `  ${c.bold("BRANCH".padEnd(26))} ${c.bold("STATUS".padEnd(8))} ${c.bold("PORTS".padEnd(26))} PATH`,
+    `  ${c.bold("BRANCH".padEnd(26))} ${c.bold("STATUS".padEnd(8))} ${ticketHead}${c.bold("PORTS".padEnd(26))} PATH`,
   );
   for (const w of entries) {
     const st = await projectStatus(w.project);
     const note = existsSync(w.path) ? "" : c.red(" (missing)");
+    const ticketCell = showTicket ? `${(w.ticket ?? "").padEnd(12)} ` : "";
     console.log(
-      `  ${w.branch.padEnd(26)} ${statusCell(st)} ${portsCell(w).padEnd(26)} ${c.dim(w.path)}${note}`,
+      `  ${w.branch.padEnd(26)} ${statusCell(st)} ${ticketCell}${portsCell(w).padEnd(26)} ${c.dim(w.path)}${note}`,
     );
   }
   console.log("");
@@ -381,6 +405,7 @@ export interface WorktreeSnapshot {
   path: string;
   pathExists: boolean;
   lastUsedAt: string;
+  ticket?: string;
 }
 
 /** Structured registry view with live status — for the MCP resource + tools (no console output). */
@@ -397,6 +422,7 @@ export async function snapshot(): Promise<WorktreeSnapshot[]> {
       path: w.path,
       pathExists: existsSync(w.path),
       lastUsedAt: w.lastUsedAt,
+      ...(w.ticket ? { ticket: w.ticket } : {}),
     });
   }
   return out.sort((a, b) => a.branch.localeCompare(b.branch));
@@ -435,6 +461,11 @@ export async function status(branchArg?: string): Promise<number> {
   if (record) {
     const missing = existsSync(record.path) ? "" : c.red("  (missing)");
     console.log(`  path      ${record.path}${missing}`);
+    if (record.ticket) {
+      const cfgRes = await loadConfig();
+      const url = cfgRes.ok ? ticketUrl(cfgRes.config, record.ticket) : null;
+      console.log(`  ticket    ${record.ticket}${url ? `  ${c.dim(url)}` : ""}`);
+    }
     console.log(`  ports     ${portsCell(record).replace(/,/g, "  ")}`);
     const envFile = join(record.path, ".steckling", "env");
     console.log(`  env       ${existsSync(envFile) ? envFile : c.dim("(not written yet)")}`);
