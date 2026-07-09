@@ -64,7 +64,15 @@ Then check your machine: `steck doctor`.
 
 ## Quickstart
 
-Add two files to your repo — a services compose file and a `steckling.yml`:
+Let the wizard set everything up — it detects your run command, offers service presets
+(Postgres, MySQL, Redis, Mongo, RabbitMQ), and writes both config files plus the
+`.gitignore` entry:
+
+```sh
+steck init
+```
+
+Or add the two files by hand — a services compose file and a `steckling.yml`:
 
 ```yaml
 # steckling.yml
@@ -106,12 +114,13 @@ Full walkthrough → [Quickstart](docs/quickstart.md) · already have a project?
 
 | | |
 | --- | --- |
+| `steck init` | Set up a repo interactively — presets, detection, both files written for you |
 | `steck new <branch> [base]` | Create a worktree + allocate its service ports |
-| `steck up [--no-run]` | Bring up services, provision on first boot, run the app |
+| `steck up [--no-run]` | Bring up services, provision once, run the app |
 | `steck down` | Stop the containers, keep the data |
 | `steck list` / `status` | What's registered, running, and on which ports |
-| `steck exec -- <cmd>` | Run a command wired to this branch's env (e.g. `psql $DATABASE_URL`) |
-| `steck rm` / `prune` | Reclaim a branch's stack / bulk-reclaim merged branches |
+| `steck exec -- <cmd>` | Run a command wired to this branch's env (e.g. `sh -c 'psql "$DATABASE_URL"'`) |
+| `steck rm` / `prune` | Reclaim a branch's stack / bulk-reclaim merged branches (`--purge`: folder + branch too) |
 | `steck deploy [--dry-run]` | Ship this branch's agent to Railway → [guide](docs/deploy-railway.md) |
 | `steck logs` / `destroy` | Tail or tear down the deployed agent |
 | `steck mcp` | Run the MCP server so Claude can drive the fleet |

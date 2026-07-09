@@ -47,18 +47,23 @@ really mean it.
 
 ### A worktree folder is still there after `rm`/`prune`
 
-By design — `rm` and `prune` reclaim the heavy Docker resources but leave your code. Remove the
-folder and branch yourself:
+By design — without `--purge`, `rm` and `prune` reclaim the heavy Docker resources but leave
+your code (the folder shows as `unreg` in `steck list`). Pass `--purge` to also remove the
+folder and delete the branch — it refuses dirty folders and unmerged branches with a warning,
+so it can't eat uncommitted work (`--force` overrides on `rm`).
 
-```sh
-git worktree remove ../<repo>-trees/<branch>
-git branch -D <branch>
-```
+### My app ignores the injected port (EADDRINUSE on the old port)
 
-### `steck list` shows a worktree as `(missing)`
+Same root cause as the database case above: the app hardcodes its port instead of reading the
+env var named in `app.port.env`. Read it with a fallback — e.g. `process.env.PORT ?? 4000` —
+and each branch's app lands on its own port.
 
-Its folder was deleted outside Steckling. `steck prune` will reclaim its stack and tidy git's
-bookkeeping.
+### `steck list` shows a worktree as `(missing)` or `unreg`
+
+`(missing)` — the folder was deleted outside Steckling; `steck prune` reclaims its stack and
+tidies git's bookkeeping. `unreg` — the opposite: a git worktree exists but has no steckling
+stack (a plain `rm` ran, or it was created with raw `git worktree add`); `steck up` there
+registers it, `steck rm <branch> --purge` removes it.
 
 ### Hot reload / file watching is slow
 

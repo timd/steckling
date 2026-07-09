@@ -14,6 +14,11 @@ Steckling creates **new, empty, per-branch databases** in their own Docker volum
 touch your existing local database or your current `docker-compose up`. They coexist on different
 ports; retire your old setup whenever you're ready.
 
+> **The fast path:** `steck init` does the steps below interactively — it can read your existing
+> `docker-compose.yml`, ask which services to publish per branch, detect your run command, and
+> write both files plus the `.gitignore` entry. The manual walkthrough that follows shows what
+> it's doing (and is there if you want full control).
+
 ## Steps (with a NestJS example)
 
 Assume a repo with a Nest app that reads `DATABASE_URL`, has `npm run migration:run` and

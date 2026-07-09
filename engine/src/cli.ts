@@ -22,7 +22,7 @@ ${c.bold("Usage:")} steck <command> [options]
 ${c.bold("Commands:")}
   init [--yes]          Set up this repo (interactive wizard; --yes writes defaults)
   new <branch> [base]   Create a worktree + allocate its service ports
-  up [--no-run]         Bring up services, provision, run the app
+  up [--no-run]         Bring up services, provision once, run the app (--reprovision re-runs)
   down                  Stop this branch's containers (keeps data)
   list                  Show every worktree, its ports + status
   status [branch]       Detailed status of a worktree

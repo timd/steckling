@@ -55,9 +55,11 @@ database. No code knows Steckling exists.
 
 ## Provisioning
 
-The first time a branch's stack comes up, Steckling runs your `provision` hook (e.g.
-`migrate && seed`) and records a marker (`.steckling/.provisioned`). Subsequent `steck up`s skip
-it. Force it again with `steck up --reprovision`.
+The `provision` hook (e.g. `migrate && seed`) runs once per stack: on the first `steck up`
+after the hook exists, after which a marker (`.steckling/.provisioned`) is recorded and
+subsequent `up`s skip it. A hook added to an already-running stack therefore still runs on the
+next `up`; a failing hook exits non-zero and leaves the marker unwritten. Force a re-run with
+`steck up --reprovision`.
 
 ## The registry
 
