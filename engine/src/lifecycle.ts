@@ -354,13 +354,16 @@ export async function tree(): Promise<number> {
     composeEnv[portEnvName(name)] = String(port);
   }
 
-  const procs: Record<string, { shell: string; env: Record<string, string> }> = {
+  const procs: Record<string, { shell: string; env: Record<string, string>; stop?: string }> = {
     app: { shell: ctx.config.app.run, env: appEnv },
   };
   for (const name of services) {
     const key = name in procs ? `${name}-logs` : name;
     procs[key] = {
       shell: `docker compose -p ${ctx.names.project} -f "${ctx.composeFile}" logs -f --tail=50 ${name}`,
+      // `docker compose logs -f` ignores mprocs' default stop signal and wedges
+      // quit at QUITTING; it's a pure viewer, so an unconditional kill is safe.
+      stop: "hard-kill",
       env: composeEnv,
     };
   }
