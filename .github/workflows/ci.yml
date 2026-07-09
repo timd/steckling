@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  typecheck:
+    name: typecheck + unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+  e2e:
+    name: dockerized e2e + MCP smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+        working-directory: engine
+      # steckling keys everything off the branch name; actions/checkout leaves
+      # a detached HEAD, so give the e2e a named branch to work on.
+      - run: git checkout -B steckling-ci
+      - run: BUN=bun bash test/e2e.sh
+        working-directory: engine
+
+  build:
+    name: cross-compile ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [bun-linux-x64, bun-darwin-arm64, bun-darwin-x64]
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # --no-compile-autoload-dotenv is load-bearing: without it the binary
+      # auto-loads worktree .env files into every child process (see 71a1172).
+      - run: >
+          bun build src/cli.ts --compile --no-compile-autoload-dotenv
+          --target=${{ matrix.target }} --outfile /tmp/steck-${{ matrix.target }}
