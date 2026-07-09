@@ -3,8 +3,8 @@
  * registry (stable ports + a record per worktree) and the worktree commands.
  */
 
-import { existsSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, rmdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import {
   composeFileHasServices,
   composePort,
@@ -94,6 +94,29 @@ function firstLine(s: string): string {
   return s.split("\n")[0] ?? s;
 }
 
+/** The trees dir a repo's worktrees live under (same resolution as planWorktree). */
+function treesDirFor(root: string, dirTemplate: string): string {
+  return resolve(root, dirTemplate.replaceAll("{repo}", basename(root)));
+}
+
+/**
+ * Slashed branch names nest folders (`trees/feat/a`); removing the worktree
+ * leaves empty `feat/` shells behind. Sweep empty ancestors, never above the
+ * trees dir (rmdir refuses non-empty dirs, so this can't take anything real).
+ */
+function removeEmptyParents(worktreePath: string, treesDir: string): void {
+  let dir = dirname(worktreePath);
+  while (dir === treesDir || dir.startsWith(treesDir + sep)) {
+    try {
+      rmdirSync(dir);
+    } catch {
+      return;
+    }
+    if (dir === treesDir) return;
+    dir = dirname(dir);
+  }
+}
+
 /**
  * The `--purge` half of rm/prune: remove the worktree folder (git refuses a
  * dirty one unless `force`) and delete the branch (-D only when we've verified
@@ -104,12 +127,14 @@ async function purgeWorktree(
   root: string,
   branch: string,
   path: string | undefined,
-  opts: { merged: boolean; force: boolean },
+  opts: { merged: boolean; force: boolean; treesDir: string },
 ): Promise<void> {
   if (path && existsSync(path)) {
     const r = await removeWorktree(root, path, opts.force);
-    if (r.ok) log.ok(`Removed folder ${path}`);
-    else {
+    if (r.ok) {
+      log.ok(`Removed folder ${path}`);
+      removeEmptyParents(path, opts.treesDir);
+    } else {
       log.warn(`Kept folder ${path}: ${firstLine(r.stderr || r.stdout)}`);
       log.info(`Remove it manually with: git worktree remove ${opts.force ? "" : "--force "}"${path}"`);
     }
@@ -546,7 +571,11 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
   if (opts.purge) {
     const root = (await repoRoot(process.cwd())) ?? process.cwd();
     const merged = await isMerged(root, branch, await baseRefFor(root, cfg.worktrees.base));
-    await purgeWorktree(root, branch, record?.path, { merged, force: opts.force });
+    await purgeWorktree(root, branch, record?.path, {
+      merged,
+      force: opts.force,
+      treesDir: treesDirFor(root, cfg.worktrees.dir),
+    });
   } else if (record && existsSync(record.path)) {
     log.info(`Worktree kept at ${record.path}  (remove with: git worktree remove "${record.path}")`);
   }
@@ -624,7 +653,11 @@ export async function prune(opts: PruneOptions): Promise<number> {
       // -D only for branches whose merged-ness the candidate check established;
       // "folder missing" candidates may hold unmerged commits, so -d lets git refuse.
       const merged = reason.startsWith("merged");
-      await purgeWorktree(root, record.branch, record.path, { merged, force: false });
+      await purgeWorktree(root, record.branch, record.path, {
+        merged,
+        force: false,
+        treesDir: treesDirFor(root, cfg.worktrees.dir),
+      });
     }
   }
   await worktreePrune(root);
