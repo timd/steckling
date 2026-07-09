@@ -76,6 +76,26 @@ Flags:
 
 ---
 
+### `steck tree`
+
+A full-terminal **cockpit** for the current branch, delegated to
+[mprocs](https://github.com/pvolok/mprocs) (install: `brew install mprocs` — `steck doctor`
+checks for it):
+
+- First does everything `steck up --no-run` does (ports, services up + healthy, env written,
+  provision-once).
+- Then opens a TUI with one pane per compose **service** (live `docker compose logs -f`) and an
+  **app** pane running `app.run` with the branch env injected — so mprocs' `s`/`x`/`r` keys
+  genuinely start/stop/restart your app. `z` zooms a pane, `q` quits.
+- Quitting leaves the services running (`steck down` stops them). The services themselves stay
+  Docker-managed throughout — the TUI is a viewport plus an app restarter, not a process manager.
+
+The config is generated fresh on every run at `.steckling/mprocs.yaml` from your
+`steckling.yml` — nothing to maintain by hand. Two branches side by side = `steck tree` in two
+terminals.
+
+---
+
 ### `steck down`
 
 Stop the current branch's containers. **Keeps volumes and data** — frees memory. Resume with

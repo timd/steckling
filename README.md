@@ -130,6 +130,7 @@ Full walkthrough → [Quickstart](docs/quickstart.md) · already have a project?
 | `steck init` | Set up a repo interactively — presets, detection, both files written for you |
 | `steck new <branch> [base]` | Create a worktree + allocate its service ports |
 | `steck up [--no-run]` | Bring up services, provision once, run the app |
+| `steck tree` | Cockpit TUI: app pane + live service logs, per branch (via mprocs) |
 | `steck down` | Stop the containers, keep the data |
 | `steck list` / `status` | What's registered, running, and on which ports |
 | `steck exec -- <cmd>` | Run a command wired to this branch's env (e.g. `sh -c 'psql "$DATABASE_URL"'`) |

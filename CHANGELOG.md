@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- **`steck tree`** — a per-branch cockpit TUI, delegated to [mprocs](https://github.com/pvolok/mprocs):
+  an app pane running `app.run` with the branch env (start/stop/restart from the TUI) plus a live
+  log pane per compose service. Generated per run at `.steckling/mprocs.yaml`; services stay
+  Docker-managed; `steck doctor` soft-checks for mprocs.
 - **`steck init`** — interactive setup wizard. Service presets (Postgres, MySQL, Redis,
   MongoDB, RabbitMQ) or adoption of an existing compose file, a run command detected from the
   repo (`package.json`, `Cargo.toml`, `go.mod`, …), `.env*` files offered for `copyOnCreate`,

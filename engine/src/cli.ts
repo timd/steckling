@@ -7,7 +7,7 @@ import { loadConfig, formatConfigError } from "./config";
 import { deploy, deployDestroy, deployLogs, deployStatus } from "./deploy";
 import { runDoctor } from "./doctor";
 import { init } from "./init";
-import { down, execCmd, list, newWorktree, prune, rm, status, up } from "./lifecycle";
+import { down, execCmd, list, newWorktree, prune, rm, status, tree, up } from "./lifecycle";
 import { startMcp } from "./mcp/server";
 import { c, log } from "./log";
 import { version } from "./version";
@@ -21,6 +21,7 @@ ${c.bold("Commands:")}
   new <branch> [base]   Create a worktree + allocate its service ports
                         (--ticket <id> to record a ticket explicitly)
   up [--no-run]         Bring up services, provision once, run the app (--reprovision re-runs)
+  tree                  Cockpit TUI for this branch: app + service logs (needs mprocs)
   down                  Stop this branch's containers (keeps data)
   list                  Show every worktree, its ports + status
   status [branch]       Detailed status of a worktree
@@ -78,6 +79,8 @@ async function main(): Promise<number> {
       const flags = argv.slice(1);
       return up({ noRun: flags.includes("--no-run"), reprovision: flags.includes("--reprovision") });
     }
+    case "tree":
+      return tree();
     case "down":
       return down();
     case "exec": {

@@ -27,6 +27,19 @@ function args(ctx: ComposeContext, rest: string[]): string[] {
  * skips Docker entirely for it. Unreadable/invalid files return true so docker
  * compose itself gets to report the real error.
  */
+/** Service names declared in a compose file ([] if unreadable or none). */
+export function composeFileServiceNames(file: string): string[] {
+  try {
+    const doc = parseYaml(readFileSync(file, "utf8"));
+    if (typeof doc !== "object" || doc === null) return [];
+    const services = (doc as Record<string, unknown>)["services"];
+    if (typeof services !== "object" || services === null) return [];
+    return Object.keys(services);
+  } catch {
+    return [];
+  }
+}
+
 export function composeFileHasServices(file: string): boolean {
   try {
     const doc = parseYaml(readFileSync(file, "utf8"));

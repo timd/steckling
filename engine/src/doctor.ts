@@ -52,6 +52,22 @@ async function checkDocker(): Promise<Check[]> {
   return [daemon, compose];
 }
 
+async function checkMprocs(): Promise<Check> {
+  if (!which("mprocs")) {
+    return {
+      name: "mprocs",
+      status: "warn",
+      detail: "not found — only needed for `steck tree` (brew install mprocs)",
+    };
+  }
+  const r = await run(["mprocs", "--version"]);
+  return {
+    name: "mprocs",
+    status: "ok",
+    detail: r.ok ? r.stdout.split("\n")[0] ?? "installed" : "installed",
+  };
+}
+
 async function checkRailway(): Promise<Check> {
   if (!which("railway")) {
     return {
@@ -91,6 +107,7 @@ export async function runDoctor(): Promise<number> {
   checks.push({ name: "bun", status: "ok", detail: `v${Bun.version}` });
   checks.push(await checkGit());
   checks.push(...(await checkDocker()));
+  checks.push(await checkMprocs());
   checks.push(await checkRailway());
   checks.push(await checkConfig());
 
