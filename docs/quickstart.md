@@ -74,6 +74,10 @@ steck up --no-run # same, but don't start the app (just bring services up)
 Your app starts with `DATABASE_URL` pointed at this branch's own Postgres. Stop with
 Ctrl-C; `steck down` stops the containers but keeps the data.
 
+Prefer a full-terminal view? `steck cockpit` does the same as `up` but opens a TUI — your app
+in one pane, live service logs in the others — and quitting it parks the whole stack
+(needs [mprocs](https://github.com/pvolok/mprocs); see [commands](commands.md#steck-cockpit---keep-up)).
+
 ## 4. Work on another branch in parallel
 
 ```sh

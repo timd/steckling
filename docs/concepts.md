@@ -82,6 +82,8 @@ crash or a manual `docker rm` can't desync it.
 
 - **Not a process manager.** It runs your one `app.run` command in the foreground; it doesn't
   supervise multiple processes. Run workers/extra processes via a second terminal or `steck exec`.
+  (`steck cockpit` doesn't change this — the TUI is delegated to mprocs, and its service panes
+  are log viewports over Docker-managed containers.)
 - **Not a container for your app.** Your app runs natively on the host — native file watching,
   native debugger, native toolchain. Only the *services* are in Docker.
 - **Not framework-aware.** It only manipulates git, Docker, ports, and env vars.

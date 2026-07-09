@@ -42,6 +42,7 @@ script, a `server.js` that reads `process.env.PORT` / `DATABASE_URL`, a gitignor
 | add `hooks.provision` to an already-upped stack | Runs on next `up` (marker = "hook ran", not "first boot"); `--reprovision` reruns; failing hook exits non-zero. |
 | empty the compose file, `steck down` | Still stops the running containers (label-based). `up` then skips Docker, injects `PORT` only. |
 | `git checkout --detach`, any command | Clear "not on a named git branch" error. |
+| `steck cockpit` | mprocs TUI: app pane runs with branch env, service panes tail logs; `q` exits **and stops the services** (data kept); `--keep-up` leaves them running. |
 
 ## Delete
 

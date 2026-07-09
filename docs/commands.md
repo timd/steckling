@@ -227,6 +227,7 @@ debugging the config or seeing what Steckling will use.
 
 ### `steck doctor`
 
-Pre-flight check: bun, git, the Docker daemon, `docker compose`, the `railway` CLI (a warning if
-absent — it's only needed for `steck deploy`), and whether a valid `steckling.yml` is present.
+Pre-flight check: bun, git, the Docker daemon, `docker compose`, `mprocs` (a warning if absent —
+only needed for `steck cockpit`), the `railway` CLI (a warning if absent — only needed for
+`steck deploy`), and whether a valid `steckling.yml` is present.
 Exits non-zero if a hard requirement fails.

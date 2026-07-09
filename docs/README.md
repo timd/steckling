@@ -5,7 +5,7 @@ Start here:
 - **[Concepts](concepts.md)** — the mental model (worktree + per-branch Docker + env injection).
   Read this first.
 - **[Install](install.md)** — script, Homebrew, from source.
-- **[Quickstart](quickstart.md)** — two files, then `steck up`.
+- **[Quickstart](quickstart.md)** — `steck init` (or two files by hand), then `steck up`.
 - **[Adopting an existing project](adopting-an-existing-project.md)** — the common case: bolting
   Steckling onto a repo you already have.
 
@@ -26,4 +26,5 @@ Project:
 
 - **[Design notes & decisions](plan.md)** — why Steckling is built the way it is.
 - **[Architecture decisions](adr/)** — ADRs (0001: the remote agent-deploy target).
+- **[Manual testing checklist](testing-checklist.md)** — the CRUD-lifecycle regression script.
 - **[Contributing](../CONTRIBUTING.md)** · **[Releasing](../RELEASING.md)**

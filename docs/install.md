@@ -43,10 +43,13 @@ bun install
 bun run src/cli.ts doctor          # run any command this way
 ```
 
-To get a real `steck` command on your PATH from a source checkout, compile it:
+To get a real `steck` command on your PATH from a source checkout, compile it with the
+project's build script (its flags matter — it disables Bun's automatic `.env` loading, which
+would otherwise leak worktree `.env` files into every app steckling runs):
 
 ```sh
-bun build src/cli.ts --compile --outfile ~/.local/bin/steck
+bun run build                          # → ../dist/steck
+cp ../dist/steck ~/.local/bin/steck
 ```
 
 ## Manual binary
@@ -61,11 +64,17 @@ mv steck-darwin-arm64 ~/.local/bin/steck
 
 Verify checksums against the release's `checksums.txt`.
 
+## Optional extras
+
+- **[mprocs](https://github.com/pvolok/mprocs)** — only needed for the `steck cockpit` TUI:
+  `brew install mprocs`
+- **[Railway CLI](https://docs.railway.com/guides/cli)** — only needed for `steck deploy`
+
 ## Verify
 
 ```sh
 steck --version
-steck doctor      # checks git, the Docker daemon, and docker compose
+steck doctor      # git, Docker daemon, docker compose, plus soft checks for mprocs + railway
 ```
 
 ## Uninstall

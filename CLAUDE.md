@@ -49,23 +49,25 @@ TypeScript on [Bun](https://bun.sh). One small, single-purpose module per concer
 state everything reconciles against — `steck list`/`status` and the MCP resource both read it,
 and it's reconciled against `docker ps` on read so a crash can't desync it.
 
-All commands in `cli.ts` are implemented — `up`/`down`/`new`/`list`/`status`/`rm`/`prune`/`mcp`
-all dispatch to real code.
+All commands in `cli.ts` are implemented — `init`/`new`/`up`/`cockpit`/`down`/`list`/`status`/
+`exec`/`rm`/`prune`/`deploy`/`logs`/`destroy`/`config`/`doctor`/`mcp` all dispatch to real code.
 
 ## Config contract — `steckling.yml`
 
 The entire per-repo surface. Everything language-specific lives in hook strings and URL
 templates; the engine stays stack-blind. Full reference: `docs/config-reference.md`. Key blocks:
 `services.expose` (container port → env var → URL template, `{port}` = allocated host port),
-`hooks.provision` (run once on first `up`, marked by `.steckling/.provisioned`), `app.run`
-(native start command). A worked example is in `demo/`.
+`hooks.provision` (runs once per stack — on the first `up` after the hook exists, marked by
+`.steckling/.provisioned`), `app.run` (native start command), optional `ticket` block
+(branch-name → ticket ID). A worked example is in `demo/`.
 
 ## Working in this repo
 
 ```sh
 cd engine
 bun install
-bun run src/cli.ts <cmd>      # e.g. doctor, config — no build step in dev
+bun run dev <cmd>             # e.g. doctor, config — no build step; dev script adds
+                              # --no-env-file (bare `bun run src/cli.ts` auto-loads cwd .env)
 bun run typecheck             # tsc --noEmit — MUST stay clean before pushing
 bun run build                 # bun build --compile → ../dist/steck (release binary)
 

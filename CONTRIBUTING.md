@@ -6,8 +6,8 @@ Thanks for your interest! Issues, bug reports, recipes, and PRs are all welcome.
 
 ```
 engine/        the steckling CLI (TypeScript, runs on Bun)
-  src/         cli.ts (dispatch) + one module per concern (config, naming, ports,
-               compose, env, registry, worktree, hooks, lifecycle, mcp/)
+  src/         cli.ts (dispatch) + one module per concern (config, init, naming, ports,
+               compose, env, registry, worktree, hooks, ticket, lifecycle, deploy, mcp/)
   test/        e2e.sh + mcp-smoke.ts
 demo/          a runnable example project (Postgres + a tiny Bun app)
 docs/          documentation
@@ -21,10 +21,13 @@ Requires [Bun](https://bun.sh), git, and Docker.
 ```sh
 cd engine
 bun install
-bun run src/cli.ts doctor     # run any command during development
+bun run dev doctor            # run any command during development
 ```
 
-There's no build step in development — Bun runs the TypeScript directly.
+There's no build step in development — Bun runs the TypeScript directly. Prefer `bun run dev
+<cmd>` over `bun run src/cli.ts <cmd>`: the dev script passes `--no-env-file`, without which
+Bun auto-loads any `.env`/`.env.local` from your cwd into steckling's environment (the compiled
+binary disables this via the build script's `--no-compile-autoload-dotenv`).
 
 ## Before you push
 
