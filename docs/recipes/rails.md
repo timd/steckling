@@ -51,6 +51,6 @@ volumes:
 
 - Rails reads `DATABASE_URL` and `REDIS_URL` directly, so nothing in `config/database.yml`
   needs to change.
-- `bin/rails db:prepare` creates + migrates (and seeds via the hook) on first boot only;
+- `bin/rails db:prepare` creates + migrates (and seeds via the hook) when the hook first runs;
   later `steck up`s skip provisioning.
 - For a worker, add a second app or run it via `steck exec -- bin/sidekiq`.

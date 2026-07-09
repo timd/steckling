@@ -56,5 +56,5 @@ volumes:
   isolated — no shared keyspace to partition.
 - **Workers**: `app.run` runs one process (the API). Start a worker in a second terminal with
   `steck exec -- npm run start:worker`, which inherits the same branch env.
-- **Migrations**: `npm run migration:run` runs once per branch on first boot; re-run with
+- **Migrations**: `npm run migration:run` runs once per branch (on the first `steck up` after the hook exists); re-run with
   `steck up --reprovision` or ad-hoc via `steck exec -- npm run migration:run`.
