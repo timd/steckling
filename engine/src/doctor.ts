@@ -57,7 +57,7 @@ async function checkMprocs(): Promise<Check> {
     return {
       name: "mprocs",
       status: "warn",
-      detail: "not found — only needed for `steck tree` (brew install mprocs)",
+      detail: "not found — only needed for `steck cockpit` (brew install mprocs)",
     };
   }
   const r = await run(["mprocs", "--version"]);

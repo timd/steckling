@@ -38,7 +38,7 @@ TypeScript on [Bun](https://bun.sh). One small, single-purpose module per concer
 | `worktree.ts` | `git worktree` add/remove, `copyOnCreate` file copying. |
 | `compose.ts` | `docker compose -p <project>` up/stop/down/port/status wrapper. |
 | `env.ts` | Resolve service URLs, write `.steckling/env`, build child-process env. |
-| `lifecycle.ts` | Orchestration for `new`/`up`/`tree`/`down`/`rm`/`prune`/`list`/`status`. |
+| `lifecycle.ts` | Orchestration for `new`/`up`/`cockpit`/`down`/`rm`/`prune`/`list`/`status`. |
 | `hooks.ts` | Run the `provision`/`postCreate`/`teardown` hooks with injected env. |
 | `ticket.ts` | Parse a ticket ID from the branch name (`ticket.pattern`), render `ticket.url`. |
 | `mcp/server.ts` | Thin MCP wrapper over `lifecycle` + a `steckling://registry` resource. |

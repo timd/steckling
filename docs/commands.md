@@ -76,7 +76,7 @@ Flags:
 
 ---
 
-### `steck tree [--keep-up]`
+### `steck cockpit [--keep-up]`
 
 A full-terminal **cockpit** for the current branch, delegated to
 [mprocs](https://github.com/pvolok/mprocs) (install: `brew install mprocs` — `steck doctor`
@@ -92,7 +92,7 @@ checks for it):
   but leave services running.
 
 The config is generated fresh on every run at `.steckling/mprocs.yaml` from your
-`steckling.yml` — nothing to maintain by hand. Two branches side by side = `steck tree` in two
+`steckling.yml` — nothing to maintain by hand. Two branches side by side = `steck cockpit` in two
 terminals.
 
 ---
