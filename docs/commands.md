@@ -59,7 +59,9 @@ Bring up the current branch's stack and run the app.
 1. Resolve/allocate host ports (reusing the registry's record so they're stable).
 2. `docker compose up --wait` (waits for healthchecks).
 3. Write `.steckling/env`.
-4. Run the `provision` hook **if this is the first boot** (tracked by `.steckling/.provisioned`).
+4. Run the `provision` hook **if it hasn't run for this stack yet** (tracked by
+   `.steckling/.provisioned`, written after the first successful run — so a hook added later
+   still runs on the next `up`).
 5. Run `app.run` in the foreground.
 
 Flags:

@@ -37,7 +37,7 @@ app:
     base: 3000
 
 hooks:
-  provision: "npm run migrate && npm run seed" # run once on first boot (and on --reprovision)
+  provision: "npm run migrate && npm run seed" # runs once, on the first up after it exists (and on --reprovision)
   teardown: "" # optional; reserved for pre-rm cleanup
 
 # Remote agent deploy (optional — Path 1; see deploy-railway.md)
