@@ -20,6 +20,7 @@ import {
   currentBranch,
   deleteBranch,
   isMerged,
+  listWorktrees,
   localBranchExists,
   remoteRefExists,
   removeWorktree,
@@ -415,7 +416,19 @@ function portsCell(rec: WorktreeRecord): string {
 export async function list(): Promise<number> {
   const reg = loadRegistry();
   const entries = Object.values(reg.worktrees).sort((a, b) => a.branch.localeCompare(b.branch));
-  if (entries.length === 0) {
+
+  // Git worktrees of the *current* repo that steckling doesn't know about —
+  // e.g. after a plain `steck rm` (which keeps the folder) or `git worktree add`.
+  const root = await repoRoot(process.cwd());
+  let unregistered: Array<{ path: string; branch: string | null }> = [];
+  if (root) {
+    const known = new Set(entries.map((e) => resolve(e.path)));
+    unregistered = (await listWorktrees(root)).filter(
+      (w) => resolve(w.path) !== resolve(root) && !known.has(resolve(w.path)),
+    );
+  }
+
+  if (entries.length === 0 && unregistered.length === 0) {
     log.info("No worktrees registered yet. Use `steck new <branch>` or `steck up`.");
     return 0;
   }
@@ -430,6 +443,14 @@ export async function list(): Promise<number> {
     console.log(
       `  ${w.branch.padEnd(26)} ${statusCell(st)} ${portsCell(w).padEnd(26)} ${c.dim(w.path)}${note}`,
     );
+  }
+  for (const w of unregistered) {
+    console.log(
+      `  ${(w.branch ?? "(detached)").padEnd(26)} ${c.dim("unreg".padEnd(8))} ${"".padEnd(26)} ${c.dim(w.path)}`,
+    );
+  }
+  if (unregistered.length > 0) {
+    console.log(`  ${c.dim("unreg = git worktree with no steckling stack — `steck up` there registers it")}`);
   }
   console.log("");
   return 0;

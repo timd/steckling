@@ -62,6 +62,30 @@ export async function isMerged(root: string, branch: string, baseRef: string): P
   return r.ok;
 }
 
+export interface GitWorktree {
+  path: string;
+  /** Branch name, or null for a detached-HEAD worktree. */
+  branch: string | null;
+}
+
+/** All of a repo's worktrees (including the main checkout, listed first). */
+export async function listWorktrees(root: string): Promise<GitWorktree[]> {
+  const r = await run(["git", "-C", root, "worktree", "list", "--porcelain"]);
+  if (!r.ok) return [];
+  const out: GitWorktree[] = [];
+  let cur: GitWorktree | null = null;
+  for (const line of r.stdout.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      if (cur) out.push(cur);
+      cur = { path: line.slice("worktree ".length).trim(), branch: null };
+    } else if (line.startsWith("branch ") && cur) {
+      cur.branch = line.slice("branch ".length).trim().replace(/^refs\/heads\//, "");
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
 /** Clean up git's bookkeeping for worktree folders that no longer exist. */
 export async function worktreePrune(root: string): Promise<void> {
   await run(["git", "-C", root, "worktree", "prune"]);
