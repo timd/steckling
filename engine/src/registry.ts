@@ -31,6 +31,8 @@ export interface WorktreeRecord {
   ports: PortsRecord;
   createdAt: string;
   lastUsedAt: string;
+  /** Ticket ID parsed from the branch name (or set via `steck new --ticket`). */
+  ticket?: string;
   /** Set once this branch has been deployed to a remote target. */
   railway?: RailwayRecord;
 }

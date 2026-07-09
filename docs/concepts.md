@@ -61,6 +61,16 @@ subsequent `up`s skip it. A hook added to an already-running stack therefore sti
 next `up`; a failing hook exits non-zero and leaves the marker unwritten. Force a re-run with
 `steck up --reprovision`.
 
+## Ticket-aware branches (optional)
+
+Steckling keys everything off the branch name — and if your tracker generates branch names
+(most can), the branch name already contains the ticket. Give Steckling the pattern once
+(`ticket.pattern` in `steckling.yml`) and every worktree knows which ticket it serves: visible in
+`steck list`/`status`, injected into hooks and your app as `$STECKLING_TICKET`, readable by
+agents over MCP. Steckling never calls the tracker's API; transitions belong in your hook strings
+or your agent, where judgment lives. See the
+[ticket-trackers recipe](recipes/ticket-trackers.md).
+
 ## The registry
 
 `~/.steckling/registry.json` is the single source of truth: every worktree, its branch, its host

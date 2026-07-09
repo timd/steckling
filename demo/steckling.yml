@@ -20,8 +20,19 @@ app:
     env: PORT
     base: 4000
 
+# Ticket identity (opt-in): branches like `eng-123-add-login` get ENG-style
+# tickets parsed, injected as $STECKLING_TICKET, and shown in `steck list`.
+ticket:
+  pattern: "eng-\\d+"
+  url: "https://example.com/issues/{ticket}"
+
 hooks:
   provision: "bun run app/provision.ts"
+  # postCreate/teardown run with the branch/ticket identity injected — a real
+  # setup would call its tracker's CLI here. These echo (and append to
+  # $E2E_HOOKS_LOG when set, which is how the e2e test observes them).
+  postCreate: 'echo "postCreate ${STECKLING_TICKET:-no-ticket}" | tee -a "${E2E_HOOKS_LOG:-/dev/null}"'
+  teardown: 'echo "teardown ${STECKLING_TICKET:-no-ticket}" | tee -a "${E2E_HOOKS_LOG:-/dev/null}"'
 
 # Deploy this branch's agent to Railway (Path 1). `steck deploy --dry-run` shows
 # exactly what would run; `steck deploy` ships it once you've linked a project.

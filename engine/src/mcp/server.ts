@@ -32,7 +32,7 @@ export function buildServer(): McpServer {
     "steckling://registry",
     {
       title: "Steckling registry",
-      description: "All worktrees with live status and host ports.",
+      description: "All worktrees with live status, host ports, and ticket ID (when configured).",
       mimeType: "application/json",
     },
     async (uri) => ({
@@ -44,7 +44,7 @@ export function buildServer(): McpServer {
     "steckling_list",
     {
       title: "List worktrees",
-      description: "Every Steckling worktree with its live status (up/stopped/down) and host ports.",
+      description: "Every Steckling worktree with its live status (up/stopped/down), host ports, and ticket ID (when configured).",
       inputSchema: {},
     },
     async () => text(JSON.stringify(await snapshot(), null, 2)),

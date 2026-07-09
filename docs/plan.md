@@ -301,7 +301,9 @@ connects to its branch DB, tear it down. The one app we maintain proves the whol
   `steck new --from-snapshot` clones the volume (seconds) instead of re-seeding (minutes). The
   big speed win physical isolation unlocks; left out of v1 for simplicity.
 - **Fleet orchestration** (decision #7): an orchestrator Claude that spawns/dispatches/tracks a
-  fleet of worker sessions across branches. Registry + MCP are designed to allow it.
+  fleet of worker sessions across branches. Registry + MCP are designed to allow it. The
+  ticket-identity substrate for it (per-worktree `ticket` field, `postCreate`/`teardown` hooks —
+  see `plan-ticketing.md`) has since landed; the orchestrator itself remains deferred.
 - **Auto-GC on merge/delete** (decision #9): kept manual (`prune`) for safety in v1.
 - **Native Windows binary** (decision #11): WSL2 only for now.
 - **Non-Node demo apps verified in CI** (decision #12): recipes are documented, not CI-run.
