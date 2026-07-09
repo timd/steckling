@@ -71,6 +71,7 @@ bun run build                 # bun build --compile → ../dist/steck (release b
 # End-to-end against real Docker (needs a NAMED branch, not detached HEAD):
 git checkout -B my-test-branch
 BUN=bun bash test/e2e.sh      # up → exec → list + the MCP smoke test
+                              # (path is engine/test/e2e.sh — run it from engine/)
 ```
 
 Requires **git + Docker + Bun**. CI (`.github/workflows/ci.yml`) runs typecheck, the dockerized
