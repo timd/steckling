@@ -565,7 +565,7 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
   const project = computeNames(branch).project;
   const record = reg.worktrees[project];
   const st = await projectStatus(project);
-  if (st === "absent" && !record) {
+  if (st === "absent" && !record && !opts.purge) {
     log.error(`Nothing to remove for '${branch}' (no containers and no registry entry).`);
     return 1;
   }
@@ -592,7 +592,10 @@ export async function rm(branchArg: string | undefined, opts: RmOptions): Promis
   if (opts.purge) {
     const root = (await repoRoot(process.cwd())) ?? process.cwd();
     const merged = await isMerged(root, branch, await baseRefFor(root, cfg.worktrees.base));
-    await purgeWorktree(root, branch, record?.path, {
+    // Unregistered worktrees (plain `rm` ran earlier) have no record — ask git.
+    const path =
+      record?.path ?? (await listWorktrees(root)).find((w) => w.branch === branch)?.path;
+    await purgeWorktree(root, branch, path, {
       merged,
       force: opts.force,
       treesDir: treesDirFor(root, cfg.worktrees.dir),
