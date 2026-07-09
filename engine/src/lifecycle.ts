@@ -321,10 +321,11 @@ export async function up(opts: UpOptions): Promise<number> {
  * `steck tree` — a per-branch cockpit TUI, delegated to mprocs (the same way
  * containers are delegated to Docker): one pane running the app with the
  * branch env injected (mprocs' s/x/r keys start/stop/restart it), plus a live
- * log pane per compose service. The services themselves stay Docker-managed;
- * quitting the TUI leaves them running.
+ * log pane per compose service. Quitting the TUI stops the branch's services
+ * too (data kept) — the cockpit *is* the branch session; `--keep-up` leaves
+ * them running instead.
  */
-export async function tree(): Promise<number> {
+export async function tree(opts: { keepUp: boolean }): Promise<number> {
   if (!which("mprocs")) {
     log.error("`steck tree` needs mprocs (the cockpit TUI), which wasn't found on PATH.");
     log.info("Install it with: brew install mprocs   (or: cargo install mprocs)");
@@ -376,7 +377,23 @@ export async function tree(): Promise<number> {
   );
 
   const rc = await runInherit(["mprocs", "-c", configPath], { cwd: ctx.worktreeDir });
-  log.info("Cockpit closed. Services are still running — `steck down` stops them.");
+
+  if (opts.keepUp) {
+    log.info("Cockpit closed. Services left running (--keep-up) — `steck down` stops them.");
+    return rc;
+  }
+  const stopped = await stopProject(ctx.names.project);
+  if (!stopped.ok) {
+    log.error("Cockpit closed, but stopping the services failed:\n" + stopped.message);
+    return 1;
+  }
+  if (stopped.stopped > 0) {
+    log.ok(
+      `Cockpit closed — stopped ${stopped.stopped} container(s), data kept. \`steck up\` or \`steck tree\` to resume.`,
+    );
+  } else {
+    log.info("Cockpit closed. No containers were running.");
+  }
   return rc;
 }
 

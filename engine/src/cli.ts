@@ -21,7 +21,7 @@ ${c.bold("Commands:")}
   new <branch> [base]   Create a worktree + allocate its service ports
                         (--ticket <id> to record a ticket explicitly)
   up [--no-run]         Bring up services, provision once, run the app (--reprovision re-runs)
-  tree                  Cockpit TUI for this branch: app + service logs (needs mprocs)
+  tree [--keep-up]      Cockpit TUI: app + service logs; quit stops services (needs mprocs)
   down                  Stop this branch's containers (keeps data)
   list                  Show every worktree, its ports + status
   status [branch]       Detailed status of a worktree
@@ -79,8 +79,10 @@ async function main(): Promise<number> {
       const flags = argv.slice(1);
       return up({ noRun: flags.includes("--no-run"), reprovision: flags.includes("--reprovision") });
     }
-    case "tree":
-      return tree();
+    case "tree": {
+      const flags = argv.slice(1);
+      return tree({ keepUp: flags.includes("--keep-up") });
+    }
     case "down":
       return down();
     case "exec": {
