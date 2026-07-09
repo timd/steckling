@@ -7,9 +7,9 @@
     "steck": "./src/cli.ts"
   },
   "scripts": {
-    "dev": "bun run src/cli.ts",
+    "dev": "bun --no-env-file run src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/cli.ts --compile --outfile ../dist/steck"
+    "build": "bun build src/cli.ts --compile --no-compile-autoload-dotenv --outfile ../dist/steck"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
