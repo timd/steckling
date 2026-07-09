@@ -8,10 +8,10 @@ import { dirname, join, resolve } from "node:path";
 import {
   composeFileHasServices,
   composePort,
-  composeStop,
   composeUp,
   destroyProject,
   projectStatus,
+  stopProject,
   type ComposeContext,
 } from "./compose";
 import { formatConfigError, loadConfig, type StecklingConfig } from "./config";
@@ -281,23 +281,17 @@ export async function down(cwd?: string): Promise<number> {
     log.error(ctx.error);
     return 1;
   }
-  if (!composeFileHasServices(ctx.composeFile)) {
-    log.info(`No services in ${c.bold(ctx.config.services.compose)} — nothing to stop.`);
-    return 0;
-  }
-  const composeCtx: ComposeContext = {
-    project: ctx.names.project,
-    file: ctx.composeFile,
-    cwd: ctx.worktreeDir,
-    env: portPlaceholders(Object.keys(ctx.config.services.expose)),
-  };
   log.info(`Stopping services for ${c.bold(ctx.branch)} (data kept)…`);
-  const r = await composeStop(composeCtx);
+  const r = await stopProject(ctx.names.project);
   if (!r.ok) {
-    log.error("docker compose stop failed:\n" + (r.stderr || r.stdout));
+    log.error("docker stop failed:\n" + r.message);
     return 1;
   }
-  log.ok("Stopped. Volumes preserved — `steck up` to resume.");
+  if (r.stopped === 0) {
+    log.info(`No running containers for ${c.bold(ctx.branch)} — nothing to stop.`);
+    return 0;
+  }
+  log.ok(`Stopped ${r.stopped} container(s). Volumes preserved — \`steck up\` to resume.`);
   return 0;
 }
 
@@ -577,15 +571,24 @@ export async function prune(opts: PruneOptions): Promise<number> {
   const base = cfg.worktrees.base;
   const baseRef = await baseRefFor(root, base);
 
-  const candidates: Array<{ record: WorktreeRecord; reason: string }> = [];
+  const candidates: Array<{ record: WorktreeRecord; reason: string; sameRepo: boolean }> = [];
   for (const record of Object.values(reg.worktrees)) {
+    // The registry is global across repos; branch checks (merged? deleted?)
+    // are only meaningful against the record's own repo. From another repo we
+    // reclaim a record only when its whole repo is gone.
+    if (record.repo !== root) {
+      if (!existsSync(record.repo)) {
+        candidates.push({ record, reason: "repo folder missing", sameRepo: false });
+      }
+      continue;
+    }
     if (record.branch === base) continue;
     if (!existsSync(record.path)) {
-      candidates.push({ record, reason: "worktree folder missing" });
+      candidates.push({ record, reason: "worktree folder missing", sameRepo: true });
     } else if (!(await localBranchExists(root, record.branch))) {
-      candidates.push({ record, reason: "branch deleted" });
+      candidates.push({ record, reason: "branch deleted", sameRepo: true });
     } else if (await isMerged(root, record.branch, baseRef)) {
-      candidates.push({ record, reason: `merged into ${base}` });
+      candidates.push({ record, reason: `merged into ${base}`, sameRepo: true });
     }
   }
 
@@ -609,13 +612,15 @@ export async function prune(opts: PruneOptions): Promise<number> {
     return 0;
   }
 
-  for (const { record, reason } of candidates) {
+  for (const { record, reason, sameRepo } of candidates) {
     const d = await destroyProject(record.project);
     await updateRegistry((r) => {
       delete r.worktrees[record.project];
     });
     log.ok(`pruned ${record.branch} — ${d.containers} container(s), ${d.volumes} volume(s)`);
-    if (opts.purge) {
+    // Purge's git operations run against the current repo, so they only apply
+    // to its own records — a missing-repo record has no repo to operate on.
+    if (opts.purge && sameRepo) {
       // -D only for branches whose merged-ness the candidate check established;
       // "folder missing" candidates may hold unmerged commits, so -d lets git refuse.
       const merged = reason.startsWith("merged");

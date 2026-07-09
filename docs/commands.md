@@ -71,8 +71,9 @@ Flags:
 
 ### `steck down`
 
-Stop the current branch's containers (`docker compose stop`). **Keeps volumes and data** — frees
-memory. Resume with `steck up`.
+Stop the current branch's containers. **Keeps volumes and data** — frees memory. Resume with
+`steck up`. Stops by compose-project label (what's actually running), so it works even if the
+compose file has been edited since the stack started.
 
 ---
 
@@ -81,9 +82,12 @@ memory. Resume with `steck up`.
 Run any command with the current branch's `.steckling/env` loaded.
 
 ```sh
-steck exec -- psql $DATABASE_URL
+steck exec -- sh -c 'psql "$DATABASE_URL"'
 steck exec -- npm run migration:revert
 ```
+
+Note the single quotes: `$DATABASE_URL` must reach the child shell unexpanded — your own shell
+doesn't have the branch env, the command steck runs does.
 
 Requires `steck up` to have been run at least once (so `.steckling/env` exists).
 
@@ -127,6 +131,10 @@ steck rm feature/PLA-123 --yes --purge
 Find worktrees whose branch is **merged into base**, **deleted**, or whose **folder is missing**,
 and reclaim their stacks (containers + volumes + registry entry). Lists candidates first; pass
 `--yes` to skip the prompt.
+
+The registry is global across repos; prune only judges branches of the repo you run it in.
+Records from *other* repos are reclaimed only when that repo's folder no longer exists
+("repo folder missing").
 
 With `--purge`, also removes each candidate's worktree folder and deletes its branch — the
 post-merge one-liner that leaves nothing behind. Same safety rules as `rm --purge`: dirty

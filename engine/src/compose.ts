@@ -44,9 +44,21 @@ export function composeUp(ctx: ComposeContext): Promise<RunResult> {
   return run(["docker", ...args(ctx, ["up", "-d", "--wait"])], { cwd: ctx.cwd, env: ctx.env });
 }
 
-/** Stop containers but keep volumes (data survives). */
-export function composeStop(ctx: ComposeContext): Promise<RunResult> {
-  return run(["docker", ...args(ctx, ["stop"])], { cwd: ctx.cwd, env: ctx.env });
+/**
+ * Stop a project's running containers by compose label, keeping volumes (data
+ * survives). Label-based rather than file-based so it stops what is *actually
+ * running* — even when the compose file has since been edited or emptied.
+ */
+export async function stopProject(
+  project: string,
+): Promise<{ ok: boolean; stopped: number; message: string }> {
+  const label = `label=com.docker.compose.project=${project}`;
+  const ps = await run(["docker", "ps", "-q", "--filter", label]);
+  if (!ps.ok) return { ok: false, stopped: 0, message: ps.stderr || ps.stdout };
+  const ids = ps.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+  if (ids.length === 0) return { ok: true, stopped: 0, message: "" };
+  const stop = await run(["docker", "stop", ...ids]);
+  return { ok: stop.ok, stopped: ids.length, message: stop.ok ? "" : stop.stderr || stop.stdout };
 }
 
 /** Remove containers + volumes (destroys data). */
