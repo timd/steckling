@@ -42,9 +42,12 @@ export interface Registry {
   worktrees: Record<string, WorktreeRecord>;
 }
 
-const DIR = join(homedir(), ".steckling");
-const FILE = join(DIR, "registry.json");
-const LOCK = join(DIR, "registry.lock");
+/** Registry home — `STECKLING_HOME` overrides (used by tests; handy for sandboxes). */
+function dir(): string {
+  return process.env["STECKLING_HOME"] ?? join(homedir(), ".steckling");
+}
+const FILE = (): string => join(dir(), "registry.json");
+const LOCK = (): string => join(dir(), "registry.lock");
 
 function emptyRegistry(): Registry {
   return { version: 1, worktrees: {} };
@@ -52,9 +55,9 @@ function emptyRegistry(): Registry {
 
 /** Read the registry (tolerant of a missing/corrupt file → empty). */
 export function loadRegistry(): Registry {
-  if (!existsSync(FILE)) return emptyRegistry();
+  if (!existsSync(FILE())) return emptyRegistry();
   try {
-    const data = JSON.parse(readFileSync(FILE, "utf8")) as Partial<Registry>;
+    const data = JSON.parse(readFileSync(FILE(), "utf8")) as Partial<Registry>;
     if (data && typeof data === "object" && data.worktrees) {
       return { version: 1, worktrees: data.worktrees };
     }
@@ -65,10 +68,10 @@ export function loadRegistry(): Registry {
 }
 
 function writeAtomic(reg: Registry): void {
-  mkdirSync(DIR, { recursive: true });
-  const tmp = `${FILE}.${process.pid}.tmp`;
+  mkdirSync(dir(), { recursive: true });
+  const tmp = `${FILE()}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(reg, null, 2) + "\n");
-  renameSync(tmp, FILE);
+  renameSync(tmp, FILE());
 }
 
 function sleep(ms: number): Promise<void> {
@@ -77,11 +80,11 @@ function sleep(ms: number): Promise<void> {
 
 /** Read-modify-write the registry under an exclusive lock. */
 export async function updateRegistry(mutate: (reg: Registry) => void): Promise<Registry> {
-  mkdirSync(DIR, { recursive: true });
+  mkdirSync(dir(), { recursive: true });
   const start = Date.now();
   for (;;) {
     try {
-      mkdirSync(LOCK); // atomic — throws if held
+      mkdirSync(LOCK()); // atomic — throws if held
       break;
     } catch {
       if (Date.now() - start > 5000) throw new Error("Timed out acquiring the registry lock");
@@ -94,7 +97,7 @@ export async function updateRegistry(mutate: (reg: Registry) => void): Promise<R
     writeAtomic(reg);
     return reg;
   } finally {
-    rmSync(LOCK, { recursive: true, force: true });
+    rmSync(LOCK(), { recursive: true, force: true });
   }
 }
 
