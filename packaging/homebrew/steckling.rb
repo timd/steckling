@@ -19,17 +19,17 @@ class Steckling < Formula
   on_macos do
     on_arm do
       url "https://github.com/timd/steckling/releases/download/v0.1.0/steck-darwin-arm64"
-      sha256 "faeec4f5ba5712f1d2e5da4b34b77a89c75b5240b7edbcd5ce689f80a0ff95ca"
+      sha256 "ff94521871d6859bac2a98d424144d8653968a211edb4236845c7dc7bf304e4b"
     end
     on_intel do
       url "https://github.com/timd/steckling/releases/download/v0.1.0/steck-darwin-x64"
-      sha256 "b55a6a50e3350241b854e95672b80dd755ec2e8b5db9b4c1d25354377d370101"
+      sha256 "2bdefd73871c7502cd04beae84473609a7f6b08147054f20c84514f27e33bcfd"
     end
   end
 
   on_linux do
     url "https://github.com/timd/steckling/releases/download/v0.1.0/steck-linux-x64"
-    sha256 "66603a8fc74b0d73cb15535e96557bfdcb8cf067e1e9d87425066c52a7f25615"
+    sha256 "3afc6cc58274ad6f88029e86f4b076bcc24fc420db416cff5722fa75674c4583"
   end
 
   def install
