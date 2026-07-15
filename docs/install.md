@@ -32,6 +32,11 @@ brew install timd/steckling/steckling
 
 (Taps `timd/homebrew-steckling` on first use.) Upgrade with `brew upgrade steckling`.
 
+> **If Homebrew complains your Xcode is too outdated:** Homebrew treats a binary-only formula
+> as a source build, so it runs its compiler-toolchain check even though nothing gets compiled.
+> Update the Command Line Tools (`xcode-select --install`) — or just use the install script
+> above, which has no such requirement.
+
 ## From source (Bun)
 
 For development, or to run the latest `main`:
